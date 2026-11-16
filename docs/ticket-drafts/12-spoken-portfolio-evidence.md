@@ -4,7 +4,7 @@
 
 **Blocked by:** 09 — Talk and type within the same coaching session; 10 — Save and show Learning evidence in a Portfolio.
 
-**Status:** draft — awaiting breakdown approval and tracker configuration.
+**Status:** accepted for implementation; published issue linked in [tracker index](../tracker-index.json).
 
 **Source stories:** 49, 50, 51, 55.
 

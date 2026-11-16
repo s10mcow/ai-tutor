@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Connect model access with visible usage controls.
 
-**Status:** draft — awaiting breakdown approval and tracker configuration.
+**Status:** accepted for implementation; published issue linked in [tracker index](../tracker-index.json).
 
 **Source stories:** 37, 38, 39, 40, 41, 56, 59.
 

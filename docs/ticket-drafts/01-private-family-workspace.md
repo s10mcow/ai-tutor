@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** implemented and verified locally; private hosted preview remains pending. See [verification](01-verification.md).
+**Status:** implemented and verified locally; private hosted preview remains pending. See [verification](01-verification.md) and the published issue in the [tracker index](../tracker-index.json).
 
 **Source stories:** 1, 2, 3, 4, 5, 6, 55.
 

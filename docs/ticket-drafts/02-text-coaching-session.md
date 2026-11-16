@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — Open a private family learning workspace.
 
-**Status:** draft — awaiting breakdown approval and tracker configuration.
+**Status:** accepted for implementation; published issue linked in [tracker index](../tracker-index.json).
 
 **Source stories:** 19, 22, 26, 27, 28, 29, 30, 31, 34, 61.
 
