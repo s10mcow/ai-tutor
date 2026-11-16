@@ -1,0 +1,155 @@
+{
+  "repository": "s10mcow/ai-tutor",
+  "spec": {
+    "number": 1,
+    "url": "https://github.com/s10mcow/ai-tutor/issues/1",
+    "title": "AI tutor: independent learning and critical thinking"
+  },
+  "tickets": [
+    {
+      "ticket": 1,
+      "number": 2,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/2",
+      "title": "01: Open a private family learning workspace",
+      "blocked_by": [],
+      "source": "docs/ticket-drafts/01-private-family-workspace.md"
+    },
+    {
+      "ticket": 2,
+      "number": 3,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/3",
+      "title": "02: Complete a typed coaching exchange",
+      "blocked_by": [
+        1
+      ],
+      "source": "docs/ticket-drafts/02-text-coaching-session.md"
+    },
+    {
+      "ticket": 3,
+      "number": 4,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/4",
+      "title": "03: Connect model access with visible usage controls",
+      "blocked_by": [
+        2
+      ],
+      "source": "docs/ticket-drafts/03-metered-model-access.md"
+    },
+    {
+      "ticket": 4,
+      "number": 5,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/5",
+      "title": "04: Discover and choose learning activities",
+      "blocked_by": [
+        2
+      ],
+      "source": "docs/ticket-drafts/04-interest-led-activities.md"
+    },
+    {
+      "ticket": 5,
+      "number": 6,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/6",
+      "title": "05: Practice reasoning and adapt unhelpful coaching",
+      "blocked_by": [
+        2
+      ],
+      "source": "docs/ticket-drafts/05-reasoning-and-adaptive-coaching.md"
+    },
+    {
+      "ticket": 6,
+      "number": 7,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/7",
+      "title": "06: Resume learning with brief personal notes",
+      "blocked_by": [
+        2
+      ],
+      "source": "docs/ticket-drafts/06-learning-notes-and-return-visits.md"
+    },
+    {
+      "ticket": 7,
+      "number": 8,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/8",
+      "title": "07: Play a short coached maths game",
+      "blocked_by": [
+        4
+      ],
+      "source": "docs/ticket-drafts/07-short-maths-game.md"
+    },
+    {
+      "ticket": 8,
+      "number": 9,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/9",
+      "title": "08: Learn from workbook and artwork pictures",
+      "blocked_by": [
+        3
+      ],
+      "source": "docs/ticket-drafts/08-workbook-and-artwork-images.md"
+    },
+    {
+      "ticket": 9,
+      "number": 10,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/10",
+      "title": "09: Talk and type within the same coaching session",
+      "blocked_by": [
+        3
+      ],
+      "source": "docs/ticket-drafts/09-spoken-and-typed-coaching.md"
+    },
+    {
+      "ticket": 10,
+      "number": 11,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/11",
+      "title": "10: Save and show Learning evidence in a Portfolio",
+      "blocked_by": [
+        2
+      ],
+      "source": "docs/ticket-drafts/10-written-portfolio-evidence.md"
+    },
+    {
+      "ticket": 11,
+      "number": 12,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/12",
+      "title": "11: Keep selected workbook and artwork pictures in the Portfolio",
+      "blocked_by": [
+        8,
+        10
+      ],
+      "source": "docs/ticket-drafts/11-picture-portfolio-evidence.md"
+    },
+    {
+      "ticket": 12,
+      "number": 13,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/13",
+      "title": "12: Deliberately save a spoken Portfolio reflection",
+      "blocked_by": [
+        9,
+        10
+      ],
+      "source": "docs/ticket-drafts/12-spoken-portfolio-evidence.md"
+    },
+    {
+      "ticket": 13,
+      "number": 14,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/14",
+      "title": "13: Check a claim against public sources",
+      "blocked_by": [
+        3
+      ],
+      "source": "docs/ticket-drafts/13-public-sources-and-claim-checking.md"
+    },
+    {
+      "ticket": 14,
+      "number": 15,
+      "url": "https://github.com/s10mcow/ai-tutor/issues/15",
+      "title": "14: Activate and verify the private family pilot",
+      "blocked_by": [
+        5,
+        6,
+        7,
+        11,
+        12,
+        13
+      ],
+      "source": "docs/ticket-drafts/14-activate-private-family-pilot.md"
+    }
+  ]
+}
