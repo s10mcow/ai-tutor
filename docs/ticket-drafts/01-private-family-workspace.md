@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** draft — awaiting breakdown approval and tracker configuration.
+**Status:** accepted for implementation; published issue linked in [tracker index](../tracker-index.json).
 
 **Source stories:** 1, 2, 3, 4, 5, 6, 55.
 

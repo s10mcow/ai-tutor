@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — Complete a typed coaching exchange.
 
-**Status:** draft — awaiting breakdown approval and tracker configuration.
+**Status:** accepted for implementation; published issue linked in [tracker index](../tracker-index.json).
 
 **Source stories:** 10, 53, 54, 55.
 

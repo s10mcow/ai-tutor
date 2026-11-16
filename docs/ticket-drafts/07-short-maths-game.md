@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 — Discover and choose learning activities.
 
-**Status:** draft — awaiting breakdown approval and tracker configuration.
+**Status:** accepted for implementation; published issue linked in [tracker index](../tracker-index.json).
 
 **Source stories:** 13, 27, 28, 29, 30, 34, 35.
 

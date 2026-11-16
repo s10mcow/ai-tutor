@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 — Practice reasoning and adapt unhelpful coaching; 06 — Resume learning with brief personal notes; 07 — Play a short coached maths game; 11 — Keep selected workbook and artwork pictures in the Portfolio; 12 — Deliberately save a spoken Portfolio reflection; 13 — Check a claim against public sources.
 
-**Status:** draft — awaiting breakdown approval and tracker configuration.
+**Status:** accepted for implementation; published issue linked in [tracker index](../tracker-index.json).
 
 **Source stories:** 5, 17, 44, 55, 57, 58, 59, 60, 61, 62.
 

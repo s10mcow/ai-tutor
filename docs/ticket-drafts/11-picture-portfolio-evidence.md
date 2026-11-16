@@ -4,7 +4,7 @@
 
 **Blocked by:** 08 — Learn from workbook and artwork pictures; 10 — Save and show Learning evidence in a Portfolio.
 
-**Status:** draft — awaiting breakdown approval and tracker configuration.
+**Status:** accepted for implementation; published issue linked in [tracker index](../tracker-index.json).
 
 **Source stories:** 24, 45, 46, 51, 55, 61.
 

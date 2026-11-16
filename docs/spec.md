@@ -1,6 +1,6 @@
 # AI tutor for independent learning and critical thinking
 
-Status: Accepted for implementation by the user's implement-spec request; GitHub publication is being established.
+Status: Accepted for implementation; published as [GitHub issue #1](https://github.com/s10mcow/ai-tutor/issues/1).
 
 Intended triage role on publication: `ready-for-agent`.
 
@@ -175,8 +175,8 @@ The primary boundary covers the Tutor application, its authorization and persist
 ## Further Notes
 
 - The user invoked `to-spec` after reviewing the design brief. This document synthesizes the agreed product direction and the two Learners' separate preferences; it does not reopen the product interview.
-- The specification is written locally but has not been published to an issue tracker. There is no Git repository, remote, issue-tracker configuration, or triage-label mapping in the workspace. The earlier setup conversation did not reach a tracker choice. Complete `setup-matt-pocock-skills`, then publish this specification using the configured `ready-for-agent` role without additional triage.
-- The testing boundary is proposed and needs the workflow's explicit confirmation. That confirmation does not require selecting a test runner or implementation stack.
+- The specification and 14 implementation tickets are published in the user-selected GitHub repository. See [tracker index](tracker-index.json) for issue links and native blocker relationships.
+- The implementation request adopts the browser-facing test boundary described above. Framework and implementation choices are made within each slice.
 - The proposed session flow and application responsibilities are implementation guidance derived from the agreed behavior. The first usability trial should validate the Learners' experience of uploading paper work, speaking to the Tutor, and interacting with a short game.
 - Model, subscription, and data-retention findings were checked against official documentation on 2026-11-16. Recheck eligibility and account state during setup rather than assuming that the documented benefit has already been claimed.
 - OpenAI documents the preferred model's text and image input and text output, eligible Pro API-credit benefits, and under-13 data-handling requirements. Relevant sources are [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [subscription API credits](https://developers.openai.com/api/docs/guides/chatgpt-api-credits), [under-18 API guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance), and [data-retention controls](https://developers.openai.com/api/docs/guides/your-data#data-retention-controls-for-abuse-monitoring).
