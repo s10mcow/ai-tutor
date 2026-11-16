@@ -1,6 +1,6 @@
 # AI tutor for independent learning and critical thinking
 
-Status: Draft specification; tracker publication and test-boundary confirmation pending.
+Status: Accepted for implementation by the user's implement-spec request; GitHub publication is being established.
 
 Intended triage role on publication: `ready-for-agent`.
 
@@ -124,7 +124,7 @@ There is no existing application code or module structure. The following respons
 
 Use one primary behavioral boundary: the public application as exercised from the browser, through its backend, authorization, and test persistence. This is the highest practical seam for the requested experience. Replace external AI, speech, and research services with controlled adapters for repeatable automated scenarios; do not mock internal application modules merely to test their wiring.
 
-The user has not yet confirmed this proposed seam. Confirmation is requested with this draft, as required by the spec workflow.
+The user's implementation request adopts this reviewed application boundary. Use it for the ticket implementations.
 
 ### What makes a good test
 
