@@ -1,0 +1,11 @@
+# Use Next.js, Better Auth, and PostgreSQL for the family boundary
+
+Ticket 01 selects Node 26, Next.js 16/React 19, Better Auth, PostgreSQL, and eve 1. Dependencies are pinned in the root package and lockfile. `apps/web` serves the browser interface and family API; `lib/family.ts` owns identity-derived access and Learner persistence. The root `vercel.ts` composes the web and eve services at one origin. The database remains durable independently of web processes.
+
+Better Auth supplies password hashing, HTTP-only session cookies, expiry and origin checks. Registration is invite-only: the request must provide a configured parent email and a separate setup code. A parent leaves the family session signed in on a trusted computer, then Learners choose their own profiles without child email accounts. The 30-day session expiry is an implementation choice; signing out revokes that session. Learner selection is stored per authenticated session so computers do not change each other's selected profile.
+
+Plain parameterized SQL is sufficient for this small model. `scripts/migrate.ts` applies Better Auth's schema from its locked package and independently appendable `migrations/<ticket>-*.sql` files under a database advisory lock and migration ledger. New feature records must carry family and Learner ownership; client identifiers and eve request context never grant access. Every future eve stream/send/cancel/clear/end route needs an app-owned session record and ownership check.
+
+The primary behavioral seam is Playwright through the actual browser, auth routes, backend and a temporary PostgreSQL cluster. Tests restart the web process to establish durable storage and use a second real invited account to verify cross-family denial. The fixture supports the complete local Vercel service composition as well as the narrow web service. It contains no authentication bypass.
+
+The eve service is deliberately closed for this slice: no tools, no model calls, no sandbox, no content traces, and a zero workflow-payload-retention request. These settings are foundations, not proof of provider or hosted Workflow World retention. The hosted preview and live-family provider controls remain separately verified acceptance criteria.

@@ -1,0 +1,40 @@
+{
+  "name": "family-learning-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "26.x"
+  },
+  "scripts": {
+    "dev": "node scripts/with-env.mjs node_modules/vercel/dist/vc.js dev --local",
+    "dev:web": "node scripts/with-env.mjs node_modules/next/dist/bin/next dev apps/web",
+    "build": "npm run build:web && eve build",
+    "build:web": "node scripts/with-env.mjs node_modules/next/dist/bin/next build apps/web",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "node scripts/with-env.mjs scripts/migrate.ts",
+    "test:browser": "node scripts/test-browser.mjs",
+    "start:web": "node scripts/with-env.mjs node_modules/next/dist/bin/next start apps/web"
+  },
+  "dependencies": {
+    "better-auth": "1.7.25",
+    "eve": "1.0.1",
+    "next": "16.4.6",
+    "pg": "8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "^26.0.0",
+    "@types/pg": "^8.16.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "prettier": "3.10.1",
+    "typescript": "7.0.2",
+    "vercel": "65.16.0"
+  },
+  "overrides": {
+    "tar": "7.5.23"
+  }
+}
