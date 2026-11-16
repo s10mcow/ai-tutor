@@ -1,0 +1,21 @@
+# 06: Resume learning with brief personal notes
+
+**What to build:** A returning Learner can continue a useful next step, and the Tutor remembers relevant interests and approaches that helped that Learner without inheriting the sibling's history.
+
+**Blocked by:** 02 — Complete a typed coaching exchange.
+
+**Status:** draft — awaiting breakdown approval and tracker configuration.
+
+**Source stories:** 10, 53, 54, 55.
+
+- [ ] A completed or paused learning exchange can retain brief notes about an expressed interest, an approach that helped, and a possible next step.
+- [ ] A new visit can present the next step and use the correct Learner's notes in the new session.
+- [ ] The Learner can choose something new instead of accepting the previous next step.
+- [ ] Notes reflect observed or stated information and do not infer mastery, fixed ability, or preferences unsupported by the exchange.
+- [ ] Persistent memory remains brief learning notes rather than silently archiving every conversation or raw recording.
+- [ ] Server-side ownership checks protect note retrieval and updates; profile switching cannot send the prior Learner's notes into a new session.
+- [ ] Browser scenarios create notes through a session, open a fresh visit, resume or decline the next step, and verify sibling isolation against the real test datastore.
+
+**Demo:** Finish a fictional learning exchange, return later to its proposed next step, then switch profiles and show that the notes do not transfer.
+
+**Scope:** Notes can arise from any text coaching exchange, so activity discovery, games, and Portfolios are not prerequisites.
