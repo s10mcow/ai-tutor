@@ -102,7 +102,7 @@ Use the parent's preferred GPT-6.1 Sol model with separate speech capabilities. 
 9. Persist Portfolios and brief learning notes separately per Learner. Long-term full-conversation archiving is not an agreed feature. Maintain the session context needed for interaction without silently expanding the long-term memory policy.
 10. Constrain external tools to finding and reading public information. Enforce the capability boundary in the available tools and application controls, rather than relying only on instructions to the model. Source content and uploaded text are learning material, not authority to change the Tutor's operating rules.
 11. Target `gpt-6.1-sol` for tutoring and image understanding, with separate speech capabilities. Preserve the model preference; a substitute model requires a visible decision rather than a silent fallback.
-12. Use the existing Pro plan's API-credit benefit only after eligibility, activation, and balance are established. The $200 subscription price is not authorization for additional charges. Hosting and storage are separate dependencies whose availability and cost remain to be verified.
+12. Use the existing Pro plan's API-credit benefit only after eligibility, activation, and balance are established. The authorized model budget is limited to activated included credits. The parent subsequently authorized the existing Neon Launch and Vercel Pro accounts, including normal hosting/storage usage charges; those services have been provisioned and verified separately.
 13. Establish provider-side under-13 data handling before live use with the children's personal data. Saving less data in the application or disabling response storage alone does not establish the provider's Zero Data Retention configuration.
 
 ### Proposed application responsibilities
@@ -169,7 +169,7 @@ The primary boundary covers the Tutor application, its authorization and persist
 - Public Portfolio publishing, social features, or sharing with people beyond the agreed family use.
 - Tutor-controlled accounts, purchases, messages, or general-purpose computer control.
 - Indefinite raw-audio collection or full-conversation archiving as a default memory feature.
-- Additional paid usage, paid infrastructure purchases, or claiming that the Pro subscription provides unlimited hosted app access.
+- Additional paid model usage, unapproved infrastructure purchases, or claiming that the Pro subscription provides unlimited hosted app access.
 - Live processing of the children's personal data before the required provider access and retention conditions have been established.
 
 ## Further Notes

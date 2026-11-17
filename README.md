@@ -52,6 +52,8 @@ Direct Sol runs Standard foreground Responses with `store:false`, explicit cachi
 
 ## Deployment and remaining pilot checks
 
+[Hosted verification](docs/hosted-verification.md) records the deployed revision, successful native cleanup, saved-media return, access checks and fixture cleanup. [Final review](docs/final-review.md) records both review axes and their fixes.
+
 Use this repository root, Node 26 and the existing `vercel.ts`. Set server environment on the intended production target, run migrations through ticket 14 against the correct database, deploy the exact tested commit, and verify the native cron. `CRON_SECRET` is independent of family login and model credentials. Follow [the deployment verification recipe](docs/ticket-drafts/14-verification.md) before claiming hosted cleanup or telemetry evidence.
 
 Actual API-credit eligibility/activation/balance, under-13 project/endpoint approval, synthetic real-model evaluation, real child/device usability, and the physical parent-computer-off trial remain external observations. Controlled journeys prove app behavior only. The [synthetic evaluation](docs/evaluations/14-private-pilot.md) is defined and unrun; it must use the real app boundary after permitted access is established. The pilot does not measure long-term educational outcomes.
