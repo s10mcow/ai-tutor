@@ -97,6 +97,9 @@ test("hints, examples, attempts, pace requests and a correction continue one act
     page.getByRole("region", { name: "Conversation" }),
   ).toContainText("multiplication check");
   tutor.reply("We can slow down. Let’s focus on just one cup.");
+  await page
+    .getByRole("button", { name: "More coaching choices", exact: true })
+    .click();
   await page.getByRole("button", { name: "Slow down", exact: true }).click();
   await expect(
     page.getByRole("region", { name: "Conversation" }),
@@ -104,6 +107,9 @@ test("hints, examples, attempts, pace requests and a correction continue one act
   tutor.reply(
     "Take your time trying independently. Tell me your reasoning when you’re ready.",
   );
+  await page
+    .getByRole("button", { name: "More coaching choices", exact: true })
+    .click();
   await page.getByRole("button", { name: "Let me try", exact: true }).click();
   await expect(
     page.getByRole("region", { name: "Conversation" }),

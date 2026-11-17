@@ -753,6 +753,97 @@ select:focus-visible {
 .coaching-heading .text-button {
   white-space: nowrap;
 }
+.coaching-controls {
+  position: relative;
+}
+.coaching-more {
+  position: absolute;
+  z-index: 5;
+  bottom: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #91a784;
+  border-radius: 10px;
+  background: var(--white);
+  box-shadow: 0 8px 25px #203c3526;
+}
+.fresh-challenge {
+  border-left: 3px solid #91a784;
+  padding: 8px 12px;
+  background: #eef2e6;
+}
+.fresh-challenge h3 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+.fresh-challenge p {
+  white-space: pre-wrap;
+}
+.coaching-panel .reasoning-prompt {
+  font-size: 12px;
+  margin: 6px 0;
+}
+.coaching-panel .break-control {
+  align-self: flex-end;
+  padding: 6px 0;
+}
+@media (min-width: 951px) and (max-height: 850px) {
+  .coaching-columns {
+    align-items: start;
+  }
+  .coaching-columns > .work-pad {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+  }
+  .coaching-columns .work-pad,
+  .coaching-panel {
+    padding: 18px;
+  }
+  .coaching-panel .conversation {
+    max-height: 130px;
+    min-height: 80px;
+    margin: 8px 0;
+  }
+  .coaching-panel h2 {
+    font-size: 26px;
+    margin-bottom: 6px;
+  }
+  .coaching-panel .eyebrow {
+    margin-bottom: 6px;
+  }
+  .coaching-panel label {
+    margin-top: 8px;
+  }
+  .coaching-panel select {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  .coaching-panel textarea {
+    min-height: 52px;
+    height: 52px;
+  }
+  .coaching-panel .primary {
+    min-height: 40px;
+    padding: 8px 16px;
+    margin-top: 8px;
+  }
+  .coaching-panel > small {
+    font-size: 10px;
+    margin-top: 8px;
+  }
+  .coaching-controls button {
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+  .coaching-columns .work-pad textarea {
+    height: 105px;
+  }
+}
 .workspace-views {
   display: grid;
   gap: 10px;

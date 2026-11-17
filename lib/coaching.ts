@@ -5,12 +5,14 @@ import type {
   CoachingAction,
   CoachingInput,
   LearningSession,
+  CoachingBreak,
 } from "./coaching-contract.ts";
 import { coachingIntents, type CoachingIntent } from "./coaching-contract.ts";
 import { tutorReply } from "./tutor-provider.ts";
 import { parseActivity } from "./activities.ts";
 import type { ActivityChoice } from "./activity-contract.ts";
 import type { MathsGame } from "./maths-game-contract.ts";
+import { changeCoachingBreak } from "./coaching-break.ts";
 
 // Never extend an activity by reading it. Deployment may choose a shorter TTL.
 function retentionSeconds() {
@@ -31,6 +33,7 @@ type SessionRow = {
   problem: string;
   activity: ActivityChoice | null;
   game: MathsGame | null;
+  break_state: CoachingBreak | null;
   expires_at: Date;
 };
 async function snapshot(row: SessionRow): Promise<LearningSession> {
@@ -50,6 +53,7 @@ async function snapshot(row: SessionRow): Promise<LearningSession> {
     problem: row.problem,
     activity: row.activity,
     game: row.game,
+    breakState: row.break_state,
     expiresAt: row.expires_at.toISOString(),
     actions,
   };
@@ -143,6 +147,18 @@ export async function submitAction(
       400,
       "Use the game controls to try an idea or get help with this delivery.",
     );
+  if (
+    input &&
+    typeof input === "object" &&
+    "intent" in input &&
+    (input.intent === "pause" || input.intent === "resume")
+  ) {
+    await changeCoachingBreak(access, learnerId, sessionId, {
+      ...input,
+      intent: input.intent,
+    });
+    return readSession(access, learnerId, sessionId);
+  }
   const action = parseInput(input);
   const attemptId = randomUUID();
   let dispatch = false;
@@ -150,11 +166,16 @@ export async function submitAction(
   try {
     await client.query("BEGIN");
     const locked = await client.query(
-      "SELECT id FROM learning_session WHERE id = $1 AND family_id = $2 AND learner_id = $3 AND expires_at > now() FOR UPDATE",
+      "SELECT id, break_state FROM learning_session WHERE id = $1 AND family_id = $2 AND learner_id = $3 AND expires_at > now() FOR UPDATE",
       [sessionId, access.familyId, learnerId],
     );
     if (!locked.rowCount)
       throw new AccessError(404, "This activity is no longer available.");
+    if (locked.rows[0].break_state?.paused)
+      throw new AccessError(
+        409,
+        "Your activity is paused. Resume when you are ready.",
+      );
     const actions = (
       await client.query<CoachingAction>(
         "SELECT * FROM learning_action WHERE session_id = $1 ORDER BY sequence",
@@ -191,6 +212,11 @@ export async function submitAction(
           [sessionId, action.id, attemptId],
         );
       } else {
+        // The saved break draft has now been used; do not restore stale input on reload.
+        await client.query(
+          "UPDATE learning_session SET break_state = NULL WHERE id = $1",
+          [sessionId],
+        );
         await client.query(
           "INSERT INTO learning_action (session_id, id, sequence, intent, text, status, attempt_id) VALUES ($1, $2, $3, $4, $5, 'pending', $6)",
           [
