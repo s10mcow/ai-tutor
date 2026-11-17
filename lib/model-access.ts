@@ -33,7 +33,7 @@ function evidence(value: string | undefined): Record<string, unknown> {
   }
 }
 export function providerConfiguration(
-  kind: "text" | "transcription" = "text",
+  kind: "text" | "image" | "transcription" = "text",
 ): ProviderConfiguration {
   const base: ProviderConfiguration = {
     mode:
@@ -168,6 +168,7 @@ export function providerConfiguration(
     retention.approvedZdr !== true ||
     retention.responsesTextApproved !== true ||
     (kind === "transcription" && retention.transcriptionsApproved !== true) ||
+    (kind === "image" && retention.responsesImagesApproved !== true) ||
     retention.applicationRetentionVerified !== true ||
     !id(retention.evidenceReference) ||
     typeof retention.expiresAt !== "string" ||
@@ -176,8 +177,7 @@ export function providerConfiguration(
     return {
       ...verified,
       reason: "unverified_retention",
-      message:
-        "Live family retention approval is unverified for this project and selected endpoint. store:false alone is not approval.",
+      message: `Live family retention approval is unverified for this project and ${kind === "transcription" ? "audio transcription endpoint" : kind === "image" ? "Responses image feature" : "text endpoint"}. store:false alone is not approval.`,
     };
   }
   const retentionExpiresAt = new Date(
@@ -237,7 +237,7 @@ export async function allowanceTotals(windowId: string) {
   };
 }
 export async function modelAccess(
-  kind: "text" | "transcription" = "text",
+  kind: "text" | "image" | "transcription" = "text",
 ): Promise<ModelAccess> {
   const config = providerConfiguration(kind);
   const totals = await allowanceTotals(config.windowId);
@@ -270,8 +270,7 @@ export async function modelAccess(
         : textReservationNanoUsd)
   ) {
     reason = "allowance_exhausted";
-    message =
-      "The remaining app allowance cannot cover another request. Saved work is still available.";
+    message = `The remaining app allowance cannot cover another ${kind} request. Saved work is still available.`;
   }
   return {
     mode: config.mode,
