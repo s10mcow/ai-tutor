@@ -1,4 +1,5 @@
 import type { CoachingAction } from "./coaching-contract.ts";
+import type { ActivityChoice } from "./activity-contract.ts";
 
 export type TutorRequest = {
   familyId: string;
@@ -7,6 +8,7 @@ export type TutorRequest = {
   actionId: string;
   attemptId: string;
   problem: string;
+  activity: ActivityChoice | null;
   actions: CoachingAction[];
 };
 
