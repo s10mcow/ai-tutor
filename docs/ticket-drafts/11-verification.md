@@ -40,6 +40,13 @@ Laptop screenshots at 1366×768 are retained outside the repository under `/tmp/
 
 This establishes local fictional-data behavior, not hosted availability or live-family readiness. Hosted backups, retention, idle cleanup scheduling, provider image approvals and under-13 handling remain deployment/activation verification. No cloud resources, actual models or children's data were used. Saved images use the existing PostgreSQL persistence choice and retain the existing normalized 3 MB maximum. The save dialog still follows ticket 10's transient-draft behavior on close.
 
-Final commands and integration checks are recorded below after completion.
+Final checks used Node 26.13.1 and an independent `npm ci` in the ticket worktree.
 
 - Before the integration merge: `npm run test:browser -- tests/picture-portfolio.spec.ts` passed all five scenarios; the four selected workbook/written Portfolio regressions passed; `npm run typecheck`, formatting and `git diff --check` passed with Node 26.13.1. No repository-wide suite was run.
+
+- `npm run test:browser -- tests/written-portfolio.spec.ts tests/image-coaching.spec.ts -g 'a Learner saves only|switching Learners during|Portfolio reads, source|a workbook interpretation'`: four passed before merging integration.
+- Implementation commit `2d28df0` was merged with integration `3424ff9` (adaptive coaching) at `62bf5d9`, without conflicts.
+- After that merge, `npm run test:browser -- tests/picture-portfolio.spec.ts`: five passed again. This exercises the combined image save, coaching input, auth and expiry flow; no checks were widened to the repository suite.
+- After that merge, `npm run typecheck` and `git diff --check`: passed.
+- `npm run build:web` with explicit fictional auth/database settings and no provider key: passed, including the new protected Portfolio image route. No eve code changed, so its build was not repeated.
+- Final laptop artifacts are `picture-selection-laptop.png` and `picture-parent-laptop.png` under the directory above; they were regenerated against the integrated branch.
