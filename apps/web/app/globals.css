@@ -788,3 +788,109 @@ select:focus-visible {
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
+
+.activity-discovery {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+  margin-top: 24px;
+}
+.activity-discovery .eyebrow {
+  margin-bottom: 10px;
+}
+.activity-discovery h2 {
+  margin-bottom: 10px;
+}
+.activity-discovery > p {
+  max-width: 720px;
+}
+.activity-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.activity-choice {
+  text-align: left;
+  border: 1px solid #a5b1a6;
+  background: #eef2e6;
+  padding: 16px;
+}
+.activity-choice:hover {
+  background: #e4edce;
+}
+.activity-choice strong {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.activity-choice > span {
+  display: block;
+  font-size: 14px;
+  margin-top: 7px;
+  color: var(--muted);
+}
+.activity-own-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+}
+.activity-own-question p {
+  margin: 0;
+}
+.activity-purpose {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+.activity-purpose p {
+  margin: 8px 0;
+}
+.activity-purpose {
+  overflow-wrap: anywhere;
+}
+.interest-form {
+  max-width: 640px;
+}
+.interest-form .primary {
+  margin: 18px 0 8px;
+}
+@media (min-width: 951px) and (max-height: 850px) {
+  .site-header {
+    height: 78px;
+  }
+  .workspace-main {
+    padding: 25px 3vw;
+  }
+  .workspace-main > .eyebrow {
+    margin-bottom: 10px;
+  }
+  .workspace-main h1 {
+    font-size: 34px;
+    margin-bottom: 10px;
+  }
+  .workspace-main > .intro {
+    margin-bottom: 12px;
+  }
+  .activity-discovery {
+    margin-top: 16px;
+  }
+  .work-columns {
+    margin-top: 18px;
+  }
+  .thinking-prompt {
+    margin-top: 16px;
+  }
+}
+@media (max-width: 650px) {
+  .activity-choices {
+    grid-template-columns: 1fr;
+  }
+  .activity-own-question {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0;
+  }
+}

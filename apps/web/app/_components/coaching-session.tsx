@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { TutorAccessNote } from "./model-access";
 import type { Learner } from "../../../../lib/family";
+import { ActivityDiscovery } from "./activity-discovery";
+import type { ActivityLaunch } from "../../../../lib/activity-contract";
 import type {
   CoachingInput,
   CoachingIntent,
@@ -56,6 +58,8 @@ export function CoachingSession({
     const last = value?.actions.at(-1);
     setIntent(value?.problem ? "attempt" : "question");
     if (last?.status === "failed") setText(last.text);
+    if (!value?.actions.length && value?.activity?.kind === "custom")
+      setText(value.activity.starter);
   }
   useEffect(() => {
     const controller = new AbortController();
@@ -99,12 +103,16 @@ export function CoachingSession({
   useEffect(() => {
     conversation.current?.scrollTo({ top: conversation.current.scrollHeight });
   }, [session]);
-  async function start() {
+  async function start(activity?: ActivityLaunch) {
     const signal = lifetime.current!.signal;
     setBusy(true);
     setError("");
     try {
-      const value = await sessionRequest(url, signal, {});
+      const value = await sessionRequest(
+        url,
+        signal,
+        activity ? { activity } : {},
+      );
       if (!signal.aborted) receive(value);
     } catch (error) {
       if (!signal.aborted)
@@ -162,12 +170,29 @@ export function CoachingSession({
     void send({ id: crypto.randomUUID(), intent: nextIntent, text: nextText });
   }
   const hasQuestion = !!session?.problem;
+  const separateInterest =
+    session?.activity?.kind === "biking"
+      ? "biking"
+      : session?.activity?.kind === "art"
+        ? "art"
+        : null;
   const submitLabel =
     !hasQuestion || intent === "question"
       ? "Ask Tutor"
       : intent === "correction"
         ? "Correct question"
         : "Share attempt";
+  if (!loading && !session)
+    return (
+      <>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        <ActivityDiscovery busy={busy} onChoose={start} />
+      </>
+    );
   return (
     <div className="work-columns coaching-columns">
       <section className="work-pad" aria-label="Current problem">
@@ -175,9 +200,30 @@ export function CoachingSession({
           <span className="eyebrow">YOUR THINKING SPACE</span>
           <span aria-hidden="true">↗</span>
         </div>
+        {session?.activity && (
+          <div className="activity-purpose">
+            <strong>{session.activity.title}</strong>
+            <p>{session.activity.purpose}</p>
+            {separateInterest && hasQuestion && (
+              <button
+                className="text-button"
+                disabled={blocked}
+                onClick={() =>
+                  action(
+                    "question",
+                    `Please keep this about ${separateInterest}. I do not want a maths connection.`,
+                  )
+                }
+              >
+                Keep this about {separateInterest}
+              </button>
+            )}
+          </div>
+        )}
         <h2>{hasQuestion ? "Our question" : "What are you wondering?"}</h2>
         <p className="current-problem">
           {session?.problem ||
+            session?.activity?.starter ||
             "Bring a question. There’s room to work it out here."}
         </p>
         <label htmlFor="scratchpad">My scratchpad</label>
@@ -214,7 +260,7 @@ export function CoachingSession({
         ) : !session ? (
           <>
             <p>Ask a question, try an idea, and explain your thinking.</p>
-            <button className="primary" disabled={busy} onClick={start}>
+            <button className="primary" disabled={busy} onClick={() => start()}>
               Start an activity <span aria-hidden="true">↗</span>
             </button>
           </>

@@ -8,6 +8,8 @@ import type {
 } from "./coaching-contract.ts";
 import { coachingIntents, type CoachingIntent } from "./coaching-contract.ts";
 import { tutorReply } from "./tutor-provider.ts";
+import { parseActivity } from "./activities.ts";
+import type { ActivityChoice } from "./activity-contract.ts";
 
 // Never extend an activity by reading it. Deployment may choose a shorter TTL.
 function retentionSeconds() {
@@ -26,6 +28,7 @@ type SessionRow = {
   id: string;
   learner_id: string;
   problem: string;
+  activity: ActivityChoice | null;
   expires_at: Date;
 };
 async function snapshot(row: SessionRow): Promise<LearningSession> {
@@ -43,6 +46,7 @@ async function snapshot(row: SessionRow): Promise<LearningSession> {
     id: row.id,
     learnerId: row.learner_id,
     problem: row.problem,
+    activity: row.activity,
     expiresAt: row.expires_at.toISOString(),
     actions,
   };
@@ -58,14 +62,19 @@ export async function currentSession(access: FamilyAccess, learnerId: string) {
   ).rows[0];
   return row ? snapshot(row) : null;
 }
-export async function startSession(access: FamilyAccess, learnerId: string) {
+export async function startSession(
+  access: FamilyAccess,
+  learnerId: string,
+  input: unknown = {},
+) {
   await requireLearner(access, learnerId);
+  const activity = parseActivity(input);
   await purgeExpiredSessions();
   const row = (
     await database.query<SessionRow>(
-      `INSERT INTO learning_session (id, family_id, learner_id, expires_at) VALUES ($1, $2, $3, now() + $4 * interval '1 second')
+      `INSERT INTO learning_session (id, family_id, learner_id, expires_at, activity) VALUES ($1, $2, $3, now() + $4 * interval '1 second', $5)
      ON CONFLICT (family_id, learner_id) DO UPDATE SET learner_id = EXCLUDED.learner_id RETURNING *`,
-      [randomUUID(), access.familyId, learnerId, retentionSeconds()],
+      [randomUUID(), access.familyId, learnerId, retentionSeconds(), activity],
     )
   ).rows[0];
   return snapshot(row);
@@ -210,6 +219,7 @@ export async function submitAction(
       actionId: action.id,
       attemptId,
       problem: session.problem,
+      activity: session.activity,
       actions: session.actions,
     });
     await database.query(
