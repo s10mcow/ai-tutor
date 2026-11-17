@@ -1,3 +1,4 @@
+import { applicationRetentionEvidence } from "./readiness-evidence";
 import { test, expect } from "./fixture";
 import type { Page } from "@playwright/test";
 
@@ -468,6 +469,8 @@ test("search needs separate retention approval and sufficient research allowance
       regionalProcessing: false,
       pricePolicy: "sol-standard-no-cache-2026-11-16",
     }),
+    CRON_SECRET: "fictional-cron-secret",
+    TUTOR_APPLICATION_RETENTION_EVIDENCE: applicationRetentionEvidence,
     TUTOR_RETENTION_EVIDENCE: JSON.stringify(retention),
   });
   expect(
@@ -480,6 +483,8 @@ test("search needs separate retention approval and sufficient research allowance
     ).json(),
   ).toMatchObject({ ready: false, reason: "unverified_retention" });
   await app.restart({
+    CRON_SECRET: "fictional-cron-secret",
+    TUTOR_APPLICATION_RETENTION_EVIDENCE: applicationRetentionEvidence,
     TUTOR_RETENTION_EVIDENCE: JSON.stringify({
       ...retention,
       responsesSearchApproved: true,

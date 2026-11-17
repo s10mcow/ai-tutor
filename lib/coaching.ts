@@ -25,9 +25,10 @@ function retentionSeconds() {
     : 86400;
 }
 export async function purgeExpiredSessions() {
-  await database.query(
+  const result = await database.query(
     "DELETE FROM learning_session WHERE expires_at <= now()",
   );
+  return result.rowCount ?? 0;
 }
 
 type SessionRow = {
@@ -242,6 +243,7 @@ export async function submitAction(
         throw new AccessError(409, "Please retry the unfinished reply first.");
       if (
         !actions.length &&
+        !locked.rows[0].problem &&
         action.intent !== "question" &&
         action.intent !== "research"
       )

@@ -1,3 +1,4 @@
+import { applicationRetentionEvidence } from "./readiness-evidence";
 import { mkdir } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixture";
@@ -550,6 +551,8 @@ test("speech readiness is separate and a depleted shared allowance prevents disp
       regionalProcessing: false,
       pricePolicy: "sol-standard-no-cache-2026-11-16",
     }),
+    CRON_SECRET: "fictional-cron-secret",
+    TUTOR_APPLICATION_RETENTION_EVIDENCE: applicationRetentionEvidence,
     TUTOR_RETENTION_EVIDENCE: JSON.stringify({
       organizationId: "org-fictional",
       projectId: "proj-fictional",

@@ -1,3 +1,4 @@
+import { applicationRetentionEvidence } from "./readiness-evidence";
 import { test, expect } from "./fixture";
 import sharp from "sharp";
 import type { Page } from "@playwright/test";
@@ -168,6 +169,8 @@ test("image retention needs its own approval even when text access is ready", as
       regionalProcessing: false,
       pricePolicy: "sol-standard-no-cache-2026-11-16",
     }),
+    CRON_SECRET: "fictional-cron-secret",
+    TUTOR_APPLICATION_RETENTION_EVIDENCE: applicationRetentionEvidence,
     TUTOR_RETENTION_EVIDENCE: JSON.stringify(retention),
   });
   expect(
@@ -181,6 +184,8 @@ test("image retention needs its own approval even when text access is ready", as
   ).toMatchObject({ ready: false, reason: "unverified_retention" });
   // Read-only readiness, with fictional credentials: never dispatch a live request.
   await app.restart({
+    CRON_SECRET: "fictional-cron-secret",
+    TUTOR_APPLICATION_RETENTION_EVIDENCE: applicationRetentionEvidence,
     TUTOR_RETENTION_EVIDENCE: JSON.stringify({
       ...retention,
       responsesImagesApproved: true,

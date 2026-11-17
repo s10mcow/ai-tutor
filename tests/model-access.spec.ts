@@ -1,3 +1,4 @@
+import { applicationRetentionEvidence } from "./readiness-evidence";
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixture";
 
@@ -341,6 +342,9 @@ function retentionEvidence() {
     evidenceReference: "fictional-retention-review",
     approvedZdr: true,
     responsesTextApproved: true,
+    responsesImagesApproved: true,
+    transcriptionsApproved: true,
+    responsesSearchApproved: true,
     applicationRetentionVerified: true,
     expiresAt: new Date(Date.now() + 86400000).toISOString(),
   };
@@ -358,11 +362,14 @@ test.describe("operator evidence", () => {
   }) => {
     await setup(page);
     const funding = fundingEvidence();
+    await page.goto("about:blank");
     await app.restart({
       TUTOR_FUNDING_EVIDENCE: JSON.stringify(funding),
+      CRON_SECRET: "fictional-cron-secret",
+      TUTOR_APPLICATION_RETENTION_EVIDENCE: applicationRetentionEvidence,
       TUTOR_RETENTION_EVIDENCE: JSON.stringify(retentionEvidence()),
     });
-    await page.reload();
+    await page.goto(app.url);
     await page.getByRole("button", { name: "Model access" }).click();
     await expect(
       page.getByRole("region", { name: "Model access" }),
@@ -390,6 +397,8 @@ test.describe("operator evidence", () => {
         ...fundingEvidence(),
         otherConsumers: "free-grant-only",
       }),
+      CRON_SECRET: "fictional-cron-secret",
+      TUTOR_APPLICATION_RETENTION_EVIDENCE: applicationRetentionEvidence,
       TUTOR_RETENTION_EVIDENCE: JSON.stringify(retentionEvidence()),
     });
     expect(
@@ -421,6 +430,8 @@ test.describe("operator evidence", () => {
         ...funding,
         expiresAt: expired,
       }),
+      CRON_SECRET: "fictional-cron-secret",
+      TUTOR_APPLICATION_RETENTION_EVIDENCE: applicationRetentionEvidence,
       TUTOR_RETENTION_EVIDENCE: JSON.stringify(retention),
     });
     expect(
@@ -437,6 +448,8 @@ test.describe("operator evidence", () => {
     ).toMatchObject({ ready: false, reason: "expired_funding_evidence" });
     await app.restart({
       TUTOR_FUNDING_EVIDENCE: JSON.stringify(funding),
+      CRON_SECRET: "fictional-cron-secret",
+      TUTOR_APPLICATION_RETENTION_EVIDENCE: applicationRetentionEvidence,
       TUTOR_RETENTION_EVIDENCE: JSON.stringify({
         ...retention,
         expiresAt: expired,

@@ -1,13 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
-import type { ModelAccess } from "../../../../lib/model-access-contract";
+import type {
+  ModelAccess,
+  PilotReadiness,
+} from "../../../../lib/model-access-contract";
 
 function dollars(value: string) {
   return `$${(Number(value) / 1e9).toFixed(4)}`;
 }
-export function ModelAccessPanel() {
+export function ModelAccessPanel({
+  onAccess,
+}: {
+  onAccess: (access: PilotReadiness) => void;
+}) {
   const [open, setOpen] = useState(false);
-  const [access, setAccess] = useState<ModelAccess | null>(null);
+  const [access, setAccess] = useState<PilotReadiness | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
     if (!open) return;
@@ -21,6 +28,7 @@ export function ModelAccessPanel() {
         const value = await response.json();
         if (!controller.signal.aborted) {
           setAccess(value);
+          onAccess(value);
           setError("");
         }
       } catch (error) {
@@ -38,7 +46,7 @@ export function ModelAccessPanel() {
       controller.abort();
       clearInterval(timer);
     };
-  }, [open]);
+  }, [open, onAccess]);
   return (
     <div className="model-access">
       <button
@@ -67,14 +75,58 @@ export function ModelAccessPanel() {
             <>
               <p>
                 <strong>
-                  {access.liveReady
+                  {access.familyLiveReady
                     ? "Live family access is available"
                     : "Live family access is closed"}
                 </strong>
               </p>
+              <p>
+                {access.familyState === "setup"
+                  ? "Family setup incomplete · use fictional information only."
+                  : access.familyState === "paused"
+                    ? "Family AI paused. Previously saved family work remains available."
+                    : "Family setup verified. Each request still checks its allowance and access."}
+              </p>
               <p>{access.message}</p>
               {access.mode === "fixture" && (
                 <p>Fictional provider fixture · synthetic allowance only.</p>
+              )}
+              <ul className="readiness-operations">
+                {Object.entries(access.operations).map(([kind, operation]) => (
+                  <li key={kind}>
+                    <strong>
+                      {
+                        {
+                          text: "Text coaching",
+                          image: "Picture interpretation",
+                          transcription: "Speech transcription",
+                          research: "Public-source checks",
+                        }[kind]
+                      }
+                      : {operation.ready ? "Available" : "Unavailable"}
+                    </strong>
+                    {!operation.ready && <p>{operation.message}</p>}
+                  </li>
+                ))}
+              </ul>
+              <p>
+                Hosted retention controls:{" "}
+                {access.applicationRetention.verified
+                  ? "verified"
+                  : "unverified"}
+                . Local read-aloud and deliberate Portfolio recording do not use
+                a model service.
+              </p>
+              {access.applicationRetention.verified && (
+                <p className="small">
+                  Temporary activities stop being available after 24 hours.
+                  Hourly cleanup deletes expired activities and unsaved pictures
+                  from the active database; service failures can delay it.
+                  Database recovery history can retain earlier states for up to
+                  a further{" "}
+                  {access.applicationRetention.recoveryHistorySeconds! / 3600}{" "}
+                  hours. Deliberate Portfolio saves remain until deleted.
+                </p>
               )}
               <dl className="usage-summary">
                 <dt>App allocation</dt>
@@ -115,9 +167,9 @@ export function ModelAccessPanel() {
                 </p>
               )}
               <p className="small">
-                Read-only status. Funding and retention approval are verified by
-                the parent through server configuration. Saved work stays
-                available.
+                Read-only status from server checks. Account, endpoint approval,
+                and hosted retention evidence are recorded by the operator after
+                verification. Saved work stays available.
               </p>
             </>
           )}
@@ -131,7 +183,7 @@ export function TutorAccessNote() {
   const [access, setAccess] = useState<ModelAccess | null>(null);
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/model-access", { signal: controller.signal })
+    fetch("/api/model-access?operation=text", { signal: controller.signal })
       .then(async (response) => {
         if (response.ok) return response.json();
         return null;
