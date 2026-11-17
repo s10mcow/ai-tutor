@@ -11,6 +11,7 @@ export type TutorRequest = {
   problem: string;
   activity: ActivityChoice | null;
   actions: CoachingAction[];
+  confirmedPictures: Array<{ kind: "workbook" | "art"; description: string }>;
 };
 
 // Explicit scripted development preview or the metered direct provider. No fallback.

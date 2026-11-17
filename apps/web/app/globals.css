@@ -1039,3 +1039,41 @@ select:focus-visible {
     gap: 0;
   }
 }
+
+.session-picture {
+  border-block: 1px solid var(--line);
+  padding: 12px 0;
+  margin: 14px 0;
+}
+.session-picture label {
+  margin-top: 10px;
+}
+.session-picture small {
+  display: block;
+  margin: 8px 0;
+}
+.session-picture button {
+  margin: 8px 8px 0 0;
+}
+.session-picture input[type="file"] {
+  padding: 8px;
+}
+.work-pad .session-picture textarea {
+  height: 96px;
+  min-height: 96px;
+  line-height: 1.5;
+  padding: 10px;
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+.attached-picture {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+  background: white;
+  border-radius: 8px;
+}
+.picture-confirmed {
+  margin: 8px 0 0;
+}

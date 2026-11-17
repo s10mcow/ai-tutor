@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SessionPicture } from "./session-picture";
 import { SaveEvidence } from "./save-evidence";
 import { TutorAccessNote } from "./model-access";
 import type { Learner } from "../../../../lib/family";
@@ -53,11 +54,15 @@ export function CoachingSession({
   const lastAction = session?.actions.at(-1);
   const failed = lastAction?.status === "failed" ? lastAction : null;
   const waiting = lastAction?.status === "pending";
-  const blocked = busy || ending || waiting || !!failed || !!unsent;
+  const imageUnconfirmed = session?.images.some(
+    (image) => image.status !== "confirmed",
+  );
+  const blocked =
+    busy || ending || waiting || !!failed || !!unsent || imageUnconfirmed;
   function receive(value: LearningSession | null) {
     setSession(value);
     const last = value?.actions.at(-1);
-    setIntent(value?.problem ? "attempt" : "question");
+    setIntent(value?.actions.length ? "attempt" : "question");
     if (last?.status === "failed") setText(last.text);
     if (!value?.actions.length && value?.activity?.kind === "custom")
       setText(value.activity.starter);
@@ -227,6 +232,14 @@ export function CoachingSession({
             session?.activity?.starter ||
             "Bring a question. There’s room to work it out here."}
         </p>
+        {session && (
+          <SessionPicture
+            key={session.id}
+            session={session}
+            disabled={busy || ending || waiting || !!failed || !!unsent}
+            onChange={receive}
+          />
+        )}
         <label htmlFor="scratchpad">My scratchpad</label>
         <textarea
           id="scratchpad"

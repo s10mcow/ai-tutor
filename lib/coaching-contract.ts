@@ -1,3 +1,4 @@
+import type { SessionImage } from "./image-contract.ts";
 import type { ActivityChoice } from "./activity-contract.ts";
 
 export const coachingIntents = [
@@ -24,6 +25,7 @@ export type LearningSession = {
   activity: ActivityChoice | null;
   expiresAt: string;
   actions: CoachingAction[];
+  images: SessionImage[];
 };
 export type CoachingInput = {
   id: string;
