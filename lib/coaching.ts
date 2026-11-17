@@ -35,6 +35,7 @@ type SessionRow = {
   activity: ActivityChoice | null;
   game: MathsGame | null;
   break_state: CoachingBreak | null;
+  break_revision: number;
   expires_at: Date;
 };
 async function snapshot(row: SessionRow): Promise<LearningSession> {
@@ -55,6 +56,7 @@ async function snapshot(row: SessionRow): Promise<LearningSession> {
     activity: row.activity,
     game: row.game,
     breakState: row.break_state,
+    breakRevision: row.break_revision,
     expiresAt: row.expires_at.toISOString(),
     actions,
   };

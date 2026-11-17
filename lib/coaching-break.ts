@@ -75,8 +75,8 @@ export async function changeCoachingBreak(
       if (input.intent === "resume")
         state = row.break_state ? { ...row.break_state, paused: false } : null;
       await client.query(
-        "UPDATE learning_session SET break_state = $2 WHERE id = $1",
-        [sessionId, state],
+        "UPDATE learning_session SET break_state = $2, break_revision = break_revision + $3 WHERE id = $1",
+        [sessionId, state, input.intent === "pause" ? 1 : 0],
       );
     }
     await client.query("COMMIT");

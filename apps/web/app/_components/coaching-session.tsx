@@ -345,13 +345,24 @@ export function CoachingSession({
             <h2>Your Tutor</h2>
           </div>
           {session && (
-            <button
-              className="text-button"
-              onClick={end}
-              disabled={ending || changingBreak}
-            >
-              End activity
-            </button>
+            <div className="coaching-heading-actions">
+              {!paused && (
+                <button
+                  className="text-button"
+                  disabled={blocked}
+                  onClick={() => changeBreak("pause")}
+                >
+                  Take a break
+                </button>
+              )}
+              <button
+                className="text-button"
+                onClick={end}
+                disabled={ending || changingBreak}
+              >
+                End activity
+              </button>
+            </div>
           )}
         </div>
         <TutorAccessNote />
@@ -451,13 +462,6 @@ export function CoachingSession({
               </div>
             ) : (
               <>
-                <button
-                  className="text-button break-control"
-                  disabled={blocked}
-                  onClick={() => changeBreak("pause")}
-                >
-                  Take a break
-                </button>
                 <form
                   onSubmit={(event: FormEvent) => {
                     event.preventDefault();
@@ -488,8 +492,7 @@ export function CoachingSession({
                     </>
                   )}
                   <p className="reasoning-prompt">
-                    What did you try, why, and what might change your mind? You
-                    can question the Tutor too.
+                    What did you try, why, and what could change your mind?
                   </p>
                   <label htmlFor="coaching-text">
                     {hasQuestion ? "Your message" : "Your question"}

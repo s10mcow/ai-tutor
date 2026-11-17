@@ -786,9 +786,11 @@ select:focus-visible {
   font-size: 12px;
   margin: 6px 0;
 }
-.coaching-panel .break-control {
-  align-self: flex-end;
-  padding: 6px 0;
+.coaching-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  justify-content: flex-end;
 }
 @media (min-width: 951px) and (max-height: 850px) {
   .coaching-columns {

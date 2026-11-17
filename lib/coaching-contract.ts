@@ -31,6 +31,7 @@ export type LearningSession = {
   activity: ActivityChoice | null;
   game: MathsGame | null;
   breakState: CoachingBreak | null;
+  breakRevision: number;
   expiresAt: string;
   actions: CoachingAction[];
 };

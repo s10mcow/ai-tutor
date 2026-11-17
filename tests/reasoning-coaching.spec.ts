@@ -197,6 +197,19 @@ test("a break saves the draft and question through restart and profile switching
   const paused = (await (await page.request.get(endpoint)).json()).session;
   expect(paused.expiresAt).toBe(before.expiresAt);
   expect(paused.actions).toEqual(before.actions);
+  expect(paused.breakRevision).toBe(before.breakRevision + 1);
+  const replay = await page.request.post(`${endpoint}/${before.id}`, {
+    headers: { origin: app.url },
+    data: {
+      intent: "pause",
+      scratchpad: "Six circles; four dots in each. Not finished.",
+      message: "My drawing shows",
+      messageIntent: "evidence",
+    },
+  });
+  expect((await replay.json()).session.breakRevision).toBe(
+    paused.breakRevision,
+  );
   const blocked = await page.request.post(`${endpoint}/${before.id}`, {
     headers: { origin: app.url },
     data: {
@@ -252,6 +265,9 @@ test("a break saves the draft and question through restart and profile switching
     "evidence",
   );
   expect(tutor.requests).toHaveLength(2);
+  expect(
+    (await (await page.request.get(endpoint)).json()).session.breakRevision,
+  ).toBe(paused.breakRevision);
   await page.getByRole("button", { name: "End activity", exact: true }).click();
   expect((await page.request.get(`${endpoint}/${before.id}`)).status()).toBe(
     404,
