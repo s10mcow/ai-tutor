@@ -18,6 +18,7 @@ export type PortfolioEntry = {
   title: string;
   evidence: WrittenEvidence[];
   images: PortfolioImage[];
+  audio: { durationSeconds: number } | null;
   reflection: string;
   createdAt: string;
 };

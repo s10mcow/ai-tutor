@@ -363,7 +363,11 @@ export function CoachingSession({
           leave.
         </small>
         {session && (
-          <SaveEvidence key={`evidence-${session.id}`} session={session} />
+          <SaveEvidence
+            key={`evidence-${session.id}`}
+            session={session}
+            disabled={capturing || paused || changingBreak || ending}
+          />
         )}
         {session?.actions.some((action) => action.status === "complete") && (
           <RememberNotes

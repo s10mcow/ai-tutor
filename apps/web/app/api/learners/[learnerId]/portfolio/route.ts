@@ -1,3 +1,4 @@
+import { portfolioSaveBody } from "../../../../../../../lib/portfolio-upload";
 import {
   familyResponse,
   requireFamily,
@@ -19,11 +20,14 @@ export async function GET(request: Request, { params }: Context) {
 export async function POST(request: Request, { params }: Context) {
   return familyResponse(async () => {
     requireSameOrigin(request);
+    const access = await requireFamily(request);
+    const body = await portfolioSaveBody(request);
     return {
       entry: await saveWrittenEvidence(
-        await requireFamily(request),
+        access,
         (await params).learnerId,
-        await request.json(),
+        body.input,
+        body.audio,
       ),
     };
   });

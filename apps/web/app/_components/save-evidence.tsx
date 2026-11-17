@@ -6,21 +6,22 @@ import {
   type PortfolioEntry,
   type WrittenEvidenceInput,
 } from "../../../../lib/portfolio-contract";
+import { SpokenReflection } from "./spoken-reflection";
 import { portfolioRequest } from "./portfolio-request";
 
-export function SaveEvidence({ session }: { session: LearningSession }) {
+export function SaveEvidence({
+  session,
+  disabled = false,
+}: {
+  session: LearningSession;
+  disabled?: boolean;
+}) {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
-  if (!session.actions.some(canSaveWrittenAction) && !session.images.length)
-    return session.actions.length ? (
-      <small>
-        Use “Share attempt” for your own explanation, discovery, or first try.
-        Then choose what to keep in your Portfolio.
-      </small>
-    ) : null;
   return (
     <div className="save-evidence">
       <button
+        disabled={disabled}
         onClick={() => {
           setSaved(false);
           setEditing(true);
@@ -61,9 +62,14 @@ function EvidenceEditor({
   const [selectedPictures, setSelectedPictures] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [reflection, setReflection] = useState("");
+  const [audio, setAudio] = useState<Blob | null>(null);
+  const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [pending, setPending] = useState<WrittenEvidenceInput | null>(null);
+  const [pending, setPending] = useState<{
+    input: WrittenEvidenceInput;
+    audio: Blob | null;
+  } | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     lifetime.current = controller;
@@ -74,7 +80,7 @@ function EvidenceEditor({
     const signal = lifetime.current!.signal;
     setBusy(true);
     setError("");
-    const input: WrittenEvidenceInput = pending ?? {
+    const input: WrittenEvidenceInput = pending?.input ?? {
       id: crypto.randomUUID(),
       sessionId: session.id,
       actionIds: selected,
@@ -82,12 +88,18 @@ function EvidenceEditor({
       title,
       reflection,
     };
-    setPending(input);
+    const recordingToSave = pending ? pending.audio : audio;
+    setPending({ input, audio: recordingToSave });
+    const body = recordingToSave ? new FormData() : input;
+    if (body instanceof FormData) {
+      body.set("input", JSON.stringify(input));
+      body.set("audio", recordingToSave!, "reflection.wav");
+    }
     try {
       await portfolioRequest<{ entry: PortfolioEntry }>(
         `/api/learners/${session.learnerId}/portfolio`,
         signal,
-        input,
+        body,
       );
       if (!signal.aborted) onSaved();
     } catch (error) {
@@ -118,10 +130,7 @@ function EvidenceEditor({
             Close
           </button>
         </div>
-        <p>
-          Keep an attempt, explanation, or discovery. Only the work you select
-          and your reflection will be saved.
-        </p>
+        <p>Choose your own work or record a reflection to keep.</p>
         {session.images.length > 0 && (
           <fieldset disabled={busy || !!pending} className="evidence-choices">
             <legend>My picture</legend>
@@ -182,8 +191,8 @@ function EvidenceEditor({
         />
         <label htmlFor="evidence-reflection">My reflection</label>
         <p id="reflection-prompt" className="small">
-          What did you try? Why? What changed your thinking? Use your own words;
-          you can edit them later.
+          What did you try, why, and what changed? Writing is optional with a
+          spoken reflection.
         </p>
         <textarea
           id="evidence-reflection"
@@ -194,23 +203,33 @@ function EvidenceEditor({
           rows={3}
           disabled={busy || !!pending}
         />
+        <SpokenReflection
+          disabled={busy || !!pending}
+          onChange={setAudio}
+          onActive={setRecording}
+        />
         {error && (
           <p role="alert" className="error">
             {error}
           </p>
         )}
-        <button
-          className="primary"
-          disabled={
-            busy ||
-            (!selected.length &&
-              (!selectedPictures.length || !reflection.trim())) ||
-            !title.trim()
-          }
-        >
-          {busy ? "Saving…" : pending ? "Retry save" : "Save to Portfolio"}
-        </button>
-        <small>Tutor suggestions are not saved as your work.</small>
+        <div className="evidence-save-actions">
+          <button
+            className="primary"
+            disabled={
+              busy ||
+              recording ||
+              (!pending &&
+                !audio &&
+                !selected.length &&
+                (!selectedPictures.length || !reflection.trim())) ||
+              !title.trim()
+            }
+          >
+            {busy ? "Saving…" : pending ? "Retry save" : "Save to Portfolio"}
+          </button>
+          <small>Tutor suggestions are not saved as your work.</small>
+        </div>
       </form>
     </dialog>
   );
