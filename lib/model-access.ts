@@ -16,6 +16,8 @@ export type ProviderConfiguration = {
   allocation: bigint;
   checkedAt: string | null;
   expiresAt: string | null;
+  evidenceExpiresAt: string | null;
+  retentionExpiresAt: string | null;
   organizationId?: string;
   projectId?: string;
 };
@@ -45,6 +47,8 @@ export function providerConfiguration(): ProviderConfiguration {
     allocation: 0n,
     checkedAt: null,
     expiresAt: null,
+    evidenceExpiresAt: null,
+    retentionExpiresAt: null,
   };
   const fixture = process.env.TUTOR_OPENAI_FIXTURE_URL;
   if (fixture && process.env.NODE_ENV !== "production") {
@@ -82,7 +86,7 @@ export function providerConfiguration(): ProviderConfiguration {
     mode: "live" as const,
     reason: "unverified_funding",
     message:
-      "Subscription credit funding has not been verified. Live access remains closed.",
+      "Subscription funding and exclusive organization use through the app allowance have not been verified. Live access remains closed.",
   };
   const funding = evidence(process.env.TUTOR_FUNDING_EVIDENCE);
   const money = (value: unknown): value is string =>
@@ -101,7 +105,8 @@ export function providerConfiguration(): ProviderConfiguration {
     funding.purchasedCreditsAbsent !== true ||
     funding.automaticRechargeDisabled !== true ||
     funding.unapprovedPostpaidDisabled !== true ||
-    funding.otherConsumers !== "free-grant-only" ||
+    funding.otherConsumers !== "none" ||
+    funding.usageBoundary !== "exclusive_app_ledger" ||
     funding.regionalProcessing !== false ||
     funding.pricePolicy !== "sol-standard-no-cache-2026-11-16" ||
     BigInt(funding.availableGrantNanoUsd) >
@@ -113,10 +118,15 @@ export function providerConfiguration(): ProviderConfiguration {
     typeof funding.checkedAt === "string" ? Date.parse(funding.checkedAt) : NaN;
   const expiresAt =
     typeof funding.expiresAt === "string" ? Date.parse(funding.expiresAt) : NaN;
+  const evidenceExpiresAt =
+    typeof funding.evidenceExpiresAt === "string"
+      ? Date.parse(funding.evidenceExpiresAt)
+      : NaN;
   const now = Date.now();
   if (
     !Number.isFinite(checkedAt) ||
     !Number.isFinite(expiresAt) ||
+    !Number.isFinite(evidenceExpiresAt) ||
     checkedAt > now
   )
     return closed;
@@ -126,6 +136,7 @@ export function providerConfiguration(): ProviderConfiguration {
     allocation: BigInt(funding.allocationNanoUsd),
     checkedAt: new Date(checkedAt).toISOString(),
     expiresAt: new Date(expiresAt).toISOString(),
+    evidenceExpiresAt: new Date(evidenceExpiresAt).toISOString(),
   };
   if (expiresAt <= now)
     return {
@@ -134,12 +145,12 @@ export function providerConfiguration(): ProviderConfiguration {
       message:
         "The verified subscription credit window has expired. Saved work remains available.",
     };
-  if (now - checkedAt > 15 * 60000)
+  if (evidenceExpiresAt <= now)
     return {
       ...verified,
-      reason: "stale_funding",
+      reason: "expired_funding_evidence",
       message:
-        "The provider balance evidence is over 15 minutes old. Fresh parent verification is required.",
+        "The recorded account funding evidence has expired. Parent verification is needed before more requests.",
     };
   if (verified.allocation === 0n)
     return {
@@ -156,7 +167,7 @@ export function providerConfiguration(): ProviderConfiguration {
     retention.applicationRetentionVerified !== true ||
     !id(retention.evidenceReference) ||
     typeof retention.expiresAt !== "string" ||
-    !(Date.parse(retention.expiresAt) > now)
+    !Number.isFinite(Date.parse(retention.expiresAt))
   ) {
     return {
       ...verified,
@@ -165,11 +176,23 @@ export function providerConfiguration(): ProviderConfiguration {
         "Live family retention approval is unverified for this project and text endpoint. store:false alone is not approval.",
     };
   }
+  const retentionExpiresAt = new Date(
+    Date.parse(retention.expiresAt),
+  ).toISOString();
+  if (Date.parse(retentionExpiresAt) <= now)
+    return {
+      ...verified,
+      retentionExpiresAt,
+      reason: "expired_retention",
+      message:
+        "The recorded retention approval has expired. Live family access is closed pending verification.",
+    };
   return {
     ...verified,
+    retentionExpiresAt,
     reason: "available",
     message:
-      "Direct GPT-6.1 Sol is available within the verified subscription grant and app allowance.",
+      "Direct GPT-6.1 Sol is available within the verified subscription grant and app allowance. The linked organization is reserved for this app’s metered usage.",
     key: process.env.OPENAI_API_KEY,
     organizationId: funding.organizationId,
     projectId: funding.projectId,
@@ -252,5 +275,7 @@ export async function modelAccess(): Promise<ModelAccess> {
     nextTextReservationNanoUsd: String(textReservationNanoUsd),
     checkedAt: config.checkedAt,
     expiresAt: config.expiresAt,
+    evidenceExpiresAt: config.evidenceExpiresAt,
+    retentionExpiresAt: config.retentionExpiresAt,
   };
 }

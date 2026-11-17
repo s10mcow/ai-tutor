@@ -291,15 +291,163 @@ test.describe("interrupted provider outcomes", () => {
       (await (await page.request.get("/api/model-access")).json())
         .unknownNanoUsd,
     ).toBe("3718000000");
+    await app.restart({ TUTOR_FIXTURE_ALLOWANCE_NANO_USD: "10000000000" });
+    expect(
+      await (await page.request.get("/api/model-access")).json(),
+    ).toMatchObject({
+      ready: false,
+      reason: "funding_changed",
+      settledNanoUsd: "23000000",
+      unknownNanoUsd: "3718000000",
+    });
+    await app.restart({ TUTOR_FIXTURE_ALLOWANCE_NANO_USD: "8000000000" });
+    expect(
+      await (await page.request.get("/api/model-access")).json(),
+    ).toMatchObject({
+      ready: true,
+      settledNanoUsd: "23000000",
+      unknownNanoUsd: "3718000000",
+      remainingNanoUsd: "4259000000",
+    });
   });
 });
+
+function fundingEvidence() {
+  return {
+    windowId: "fictional-grant-2026-11",
+    organizationId: "org-fictional",
+    projectId: "proj-fictional",
+    source: "activated_subscription_grant",
+    evidenceReference: "fictional-account-review",
+    activatedGrantNanoUsd: "200000000000",
+    availableGrantNanoUsd: "10000000000",
+    allocationNanoUsd: "8000000000",
+    checkedAt: new Date(Date.now() - 16 * 60000).toISOString(),
+    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    evidenceExpiresAt: new Date(Date.now() + 43200000).toISOString(),
+    purchasedCreditsAbsent: true,
+    automaticRechargeDisabled: true,
+    unapprovedPostpaidDisabled: true,
+    otherConsumers: "none",
+    usageBoundary: "exclusive_app_ledger",
+    regionalProcessing: false,
+    pricePolicy: "sol-standard-no-cache-2026-11-16",
+  };
+}
+function retentionEvidence() {
+  return {
+    organizationId: "org-fictional",
+    projectId: "proj-fictional",
+    evidenceReference: "fictional-retention-review",
+    approvedZdr: true,
+    responsesTextApproved: true,
+    applicationRetentionVerified: true,
+    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+  };
+}
 
 test.describe("operator evidence", () => {
   test.use({
     controlledTutorEnabled: false,
     modelEnvironment: { OPENAI_API_KEY: "fictional-not-a-live-key" },
   });
-  test("funding freshness, strict subscription-only funding, and retention are separate live gates", async ({
+  test("independent access stays available after fifteen minutes within recorded evidence expiry", async ({
+    page,
+    app,
+    openai,
+  }) => {
+    await setup(page);
+    const funding = fundingEvidence();
+    await app.restart({
+      TUTOR_FUNDING_EVIDENCE: JSON.stringify(funding),
+      TUTOR_RETENTION_EVIDENCE: JSON.stringify(retentionEvidence()),
+    });
+    await page.reload();
+    await page.getByRole("button", { name: "Model access" }).click();
+    await expect(
+      page.getByRole("region", { name: "Model access" }),
+    ).toContainText("Live family access is available");
+    expect(
+      await (await page.request.get("/api/model-access")).json(),
+    ).toMatchObject({
+      ready: true,
+      reason: "available",
+      checkedAt: funding.checkedAt,
+      evidenceExpiresAt: funding.evidenceExpiresAt,
+    });
+    // Readiness exercises the same server policy as dispatch; synthetic credentials
+    // are never used for a provider request in this operator-evidence scenario.
+    expect(openai.requests).toHaveLength(0);
+  });
+  test("uncoordinated free-grant consumers cannot satisfy strict live funding", async ({
+    page,
+    app,
+    openai,
+  }) => {
+    await setup(page);
+    await app.restart({
+      TUTOR_FUNDING_EVIDENCE: JSON.stringify({
+        ...fundingEvidence(),
+        otherConsumers: "free-grant-only",
+      }),
+      TUTOR_RETENTION_EVIDENCE: JSON.stringify(retentionEvidence()),
+    });
+    expect(
+      await (await page.request.get("/api/model-access")).json(),
+    ).toMatchObject({ ready: false, reason: "unverified_funding" });
+    await app.restart({
+      TUTOR_FUNDING_EVIDENCE: JSON.stringify({
+        ...fundingEvidence(),
+        otherConsumers: "none",
+        usageBoundary: "uncoordinated",
+      }),
+    });
+    expect(
+      await (await page.request.get("/api/model-access")).json(),
+    ).toMatchObject({ ready: false, reason: "unverified_funding" });
+    expect(openai.requests).toHaveLength(0);
+  });
+  test("actual grant, funding-evidence and retention expiry each close live readiness", async ({
+    page,
+    app,
+    openai,
+  }) => {
+    await setup(page);
+    const funding = fundingEvidence();
+    const retention = retentionEvidence();
+    const expired = new Date(Date.now() - 1000).toISOString();
+    await app.restart({
+      TUTOR_FUNDING_EVIDENCE: JSON.stringify({
+        ...funding,
+        expiresAt: expired,
+      }),
+      TUTOR_RETENTION_EVIDENCE: JSON.stringify(retention),
+    });
+    expect(
+      await (await page.request.get("/api/model-access")).json(),
+    ).toMatchObject({ ready: false, reason: "expired_funding" });
+    await app.restart({
+      TUTOR_FUNDING_EVIDENCE: JSON.stringify({
+        ...funding,
+        evidenceExpiresAt: expired,
+      }),
+    });
+    expect(
+      await (await page.request.get("/api/model-access")).json(),
+    ).toMatchObject({ ready: false, reason: "expired_funding_evidence" });
+    await app.restart({
+      TUTOR_FUNDING_EVIDENCE: JSON.stringify(funding),
+      TUTOR_RETENTION_EVIDENCE: JSON.stringify({
+        ...retention,
+        expiresAt: expired,
+      }),
+    });
+    expect(
+      await (await page.request.get("/api/model-access")).json(),
+    ).toMatchObject({ ready: false, reason: "expired_retention" });
+    expect(openai.requests).toHaveLength(0);
+  });
+  test("funding validity, strict subscription-only funding, and retention are separate live gates", async ({
     page,
     app,
     openai,
@@ -312,24 +460,7 @@ test.describe("operator evidence", () => {
       reason: "unverified_funding",
       liveReady: false,
     });
-    const evidence = {
-      windowId: "fictional-grant-2026-11",
-      organizationId: "org-fictional",
-      projectId: "proj-fictional",
-      source: "activated_subscription_grant",
-      evidenceReference: "fictional-account-review",
-      activatedGrantNanoUsd: "200000000000",
-      availableGrantNanoUsd: "10000000000",
-      allocationNanoUsd: "8000000000",
-      checkedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 86400000).toISOString(),
-      purchasedCreditsAbsent: true,
-      automaticRechargeDisabled: true,
-      unapprovedPostpaidDisabled: true,
-      otherConsumers: "free-grant-only",
-      regionalProcessing: false,
-      pricePolicy: "sol-standard-no-cache-2026-11-16",
-    };
+    const evidence = fundingEvidence();
     await app.restart({ TUTOR_FUNDING_EVIDENCE: JSON.stringify(evidence) });
     expect(await status()).toMatchObject({
       reason: "unverified_retention",
@@ -348,11 +479,11 @@ test.describe("operator evidence", () => {
     await app.restart({
       TUTOR_FUNDING_EVIDENCE: JSON.stringify({
         ...evidence,
-        checkedAt: new Date(Date.now() - 16 * 60000).toISOString(),
+        checkedAt: new Date(Date.now() + 60000).toISOString(),
       }),
     });
     expect(await status()).toMatchObject({
-      reason: "stale_funding",
+      reason: "unverified_funding",
       liveReady: false,
     });
     await app.restart({
