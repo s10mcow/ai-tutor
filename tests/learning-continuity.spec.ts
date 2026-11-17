@@ -35,7 +35,7 @@ async function exchange(page: Page, tutor: { reply: (text: string) => void }) {
     page.getByRole("region", { name: "Conversation" }),
   ).toContainText("compare in two cups");
 }
-async function saveNotes(page: Page) {
+async function saveNotes(page: Page, screenshotPath?: string) {
   await page
     .getByRole("button", { name: "Remember for next time", exact: true })
     .click();
@@ -44,6 +44,7 @@ async function saveNotes(page: Page) {
     .getByLabel("An approach that helped me")
     .fill(notes.helpfulApproach);
   await page.getByLabel("A possible next step").fill(notes.nextStep);
+  if (screenshotPath) await page.screenshot({ path: screenshotPath });
   await page
     .getByRole("button", { name: "Save learning notes", exact: true })
     .click();
@@ -59,7 +60,7 @@ test("a Learner keeps brief stated notes and resumes them on a fresh visit witho
   await page.setViewportSize({ width: 1366, height: 768 });
   await openWorkspace(page);
   await exchange(page, tutor);
-  await saveNotes(page);
+  await saveNotes(page, testInfo.outputPath("learning-note-dialog-laptop.png"));
   const family = await (await page.request.get("/api/family")).json();
   const base = `/api/learners/${family.selectedLearnerId}`;
   await page.getByRole("button", { name: "End activity", exact: true }).click();
@@ -439,4 +440,45 @@ test("switching Learners while a note edit is unconfirmed never transfers it to 
   expect((await (await page.request.get(endpoint)).json()).notes.interest).toBe(
     "River is curious about sourdough bubbles.",
   );
+});
+
+test("a paused maths game can keep Learner-stated next steps without a provider call", async ({
+  page,
+  tutor,
+}) => {
+  await openWorkspace(page);
+  await page
+    .getByRole("button", { name: "Short maths game", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Start with smaller numbers", exact: true })
+    .click();
+  await page.getByLabel("Tiles in each tray").fill("3");
+  await page
+    .getByLabel("Why did you choose that number?")
+    .fill("I tried counting one tray at a time.");
+  await page
+    .getByRole("button", { name: "Check my idea", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Game coaching" }),
+  ).toContainText("3 in each tray uses 9");
+  await page
+    .getByRole("button", { name: "Remember for next time", exact: true })
+    .click();
+  await page
+    .getByLabel("An approach that helped me")
+    .fill("Moving one tile at a time helped me check.");
+  await page
+    .getByLabel("A possible next step")
+    .fill("Try sharing the last three tiles.");
+  await page
+    .getByRole("button", { name: "Save learning notes", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Learning notes saved");
+  await page.getByRole("button", { name: "End activity", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Learning continuity" }),
+  ).toContainText("Try sharing the last three tiles.");
+  expect(tutor.requests).toHaveLength(0);
 });

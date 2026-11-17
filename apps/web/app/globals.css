@@ -1254,7 +1254,8 @@ select:focus-visible {
 .learning-notes label {
   margin-top: 8px;
 }
-.learning-notes textarea {
+.learning-notes textarea,
+.work-pad .notes-dialog textarea {
   min-height: 54px;
   height: 54px;
   padding: 10px 12px;

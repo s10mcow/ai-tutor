@@ -27,3 +27,12 @@ The accepted Playwright seam uses real Better Auth, application HTTP routes and 
 React guidance was reviewed for separate components, browser-safe types, labelled form fields, a native modal, narrow effect dependencies, and request abort/unmount cleanup. The 1366×768 return and editor views were inspected; the original screenshot caught primary-button contrast and form-height problems, which were corrected. Final screenshot artifacts are stored outside the repository at `/tmp/ai-tutor-research/ticket06/`.
 
 Local checks use Node 26.13.1 and fictional data. Five continuity scenarios and typecheck passed before integration. Final integrated checks are recorded below. No complete repository suite was run, and no live provider call, paid resource or real child data was used. Hosted availability, provider credit/retention readiness, cleanup/backups and actual teaching quality remain external activation gates.
+
+Final integration at `e21c60e` (funding-policy refinement and maths game):
+
+- The separate game view now offers the same notes editor after a completed attempt, including an incorrect attempt. Its scenario first failed at the missing control, then passed. No game feedback is copied into notes, and saving still makes no provider call.
+- `npm run test:browser -- tests/learning-continuity.spec.ts tests/activity-discovery.spec.ts tests/text-coaching.spec.ts -g 'Learner keeps brief|decline the old|direct Sol receives|notes enforce|switching Learners while a note|paused maths game|launches biking|a Learner starts a typed'`: eight passed (all six continuity scenarios and two affected regressions).
+- `npm run typecheck`: passed after integration.
+- `npm run build`: Next.js and eve passed with explicit fictional auth URL/secret.
+- Formatting and `git diff --check`: passed.
+- Final `return-visit-laptop.png`, `learning-notes-laptop.png` and `learning-note-dialog-laptop.png` were inspected at 1366×768. Return choices and all editor fields/actions fit and have readable contrast.
