@@ -30,4 +30,11 @@ Laptop screenshots at 1366×768 are retained outside the repository in `/tmp/ai-
 
 This is local fictional-data evidence. Controlled oscillator playback is not proof of real microphone quality, audible hardware output, or child usability. Ticket 14 owns those family-flow checks. Hosted ticket 12 playback, storage/backups and retention remain deployment verification work; application source controls are not a claim about provider or hosting retention. No live model request or children’s data was used, and no cloud resource was created by this ticket.
 
-Final targeted commands and outcomes are recorded after the integration merge below.
+Node 26.13.1 checks:
+
+- `npm run test:browser -- tests/spoken-portfolio.spec.ts`: six passed.
+- `npm run test:browser -- tests/spoken-portfolio.spec.ts tests/written-portfolio.spec.ts tests/picture-portfolio.spec.ts tests/voice-coaching.spec.ts -g 'a new spoken reflection|a Learner saves only selected|a lost save response|a picture keeps|a failed picture transaction|transcription validates bytes|reviewed speech and typed'`: seven passed, preserving the image and written save contracts and ordinary speech validation.
+- After merging public-source integration `9f0b394`, `npm run test:browser -- tests/spoken-portfolio.spec.ts tests/public-sources.spec.ts tests/voice-coaching.spec.ts -g 'a new spoken reflection|a failed audio commit|a deliberately kept|a Learner inspects retrieved|reviewed speech and typed'`: five passed. The subsequent integration `545268a` only records ticket 13 acceptance and is also merged.
+- `npm run typecheck`: passed before and after the feature integration merge.
+- Production `npm run build:web`: passed with explicit fictional auth configuration and unavailable model/database endpoints. The protected Portfolio audio route is included in the production route map.
+- Prettier and `git diff --check`: passed for the changed source. No full repository test-suite run was needed.
