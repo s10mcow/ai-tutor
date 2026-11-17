@@ -1,3 +1,4 @@
+import { validateRecording } from "./audio-recording.ts";
 import { createHash } from "node:crypto";
 import { database } from "./database.ts";
 import { AccessError, requireLearner, type FamilyAccess } from "./family.ts";
@@ -19,6 +20,7 @@ type EntryRow = {
   title: string;
   evidence: WrittenEvidence[];
   images: PortfolioImage[];
+  audio: PortfolioEntry["audio"];
   reflection: string;
   created_at: Date;
 };
@@ -29,11 +31,12 @@ function entry(row: EntryRow): PortfolioEntry {
     title: row.title,
     evidence: row.evidence,
     images: row.images,
+    audio: row.audio,
     reflection: row.reflection,
     createdAt: row.created_at.toISOString(),
   };
 }
-function parseInput(value: unknown): WrittenEvidenceInput {
+function parseInput(value: unknown, hasAudio: boolean): WrittenEvidenceInput {
   const input = value as Partial<WrittenEvidenceInput> | null;
   const validId = (id: unknown): id is string =>
     typeof id === "string" && /^[a-zA-Z0-9-]{1,80}$/.test(id);
@@ -49,13 +52,13 @@ function parseInput(value: unknown): WrittenEvidenceInput {
       (!Array.isArray(input.imageIds) ||
         input.imageIds.length > 1 ||
         !input.imageIds.every(validId))) ||
-    (!input.actionIds.length && !input.imageIds?.length) ||
+    (!input.actionIds.length && !input.imageIds?.length && !hasAudio) ||
     typeof input.title !== "string" ||
     !input.title.trim() ||
     input.title.trim().length > 100 ||
     typeof input.reflection !== "string" ||
     input.reflection.length > 4000 ||
-    (!input.actionIds.length && !input.reflection.trim())
+    (!input.actionIds.length && !input.reflection.trim() && !hasAudio)
   ) {
     throw new AccessError(
       400,
@@ -109,12 +112,26 @@ export async function saveWrittenEvidence(
   access: FamilyAccess,
   learnerId: string,
   value: unknown,
+  audioBytes?: Buffer,
 ): Promise<PortfolioEntry> {
   await requireLearner(access, learnerId);
-  const input = parseInput(value);
+  const audio = audioBytes
+    ? { durationSeconds: validateRecording(audioBytes) }
+    : null;
+  const input = parseInput(value, !!audio);
   const fingerprint = createHash("sha256")
     .update(
-      JSON.stringify({ ...input, actionIds: [...input.actionIds].sort() }),
+      JSON.stringify({
+        ...input,
+        actionIds: [...input.actionIds].sort(),
+        ...(audioBytes
+          ? {
+              audioDigest: createHash("sha256")
+                .update(audioBytes)
+                .digest("hex"),
+            }
+          : {}),
+      }),
     )
     .digest("hex");
   const client = await database.connect();
@@ -193,7 +210,7 @@ export async function saveWrittenEvidence(
     }));
     const row = (
       await client.query<EntryRow>(
-        "INSERT INTO portfolio_entry (id, family_id, learner_id, title, evidence, reflection, save_fingerprint, images) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+        "INSERT INTO portfolio_entry (id, family_id, learner_id, title, evidence, reflection, save_fingerprint, images, audio) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
         [
           input.id,
           access.familyId,
@@ -203,9 +220,15 @@ export async function saveWrittenEvidence(
           input.reflection,
           fingerprint,
           JSON.stringify(images),
+          audio ? JSON.stringify(audio) : null,
         ],
       )
     ).rows[0];
+    if (audioBytes)
+      await client.query(
+        "INSERT INTO portfolio_audio(entry_id, bytes) VALUES ($1, $2)",
+        [input.id, audioBytes],
+      );
     for (const picture of pictures)
       await client.query(
         "INSERT INTO portfolio_image(entry_id, id, bytes) VALUES ($1, $2, $3)",
@@ -239,7 +262,7 @@ export async function editReflection(
   }
   if (!value.reflection.trim()) {
     const existing = await readPortfolioEntry(access, learnerId, entryId);
-    if (existing.images.length && !existing.evidence.length)
+    if (existing.images.length && !existing.evidence.length && !existing.audio)
       throw new AccessError(
         400,
         "Keep your own explanation or reflection alongside your picture.",
@@ -271,5 +294,22 @@ export async function readPortfolioImage(
   ).rows[0];
   if (!row)
     throw new AccessError(404, "That Portfolio picture is unavailable.");
+  return row.bytes;
+}
+
+export async function readPortfolioAudio(
+  access: FamilyAccess,
+  learnerId: string,
+  entryId: string,
+): Promise<Buffer> {
+  await requireLearner(access, learnerId);
+  const row = (
+    await database.query<{ bytes: Buffer }>(
+      "SELECT audio.bytes FROM portfolio_audio audio JOIN portfolio_entry entry ON entry.id = audio.entry_id WHERE entry.id = $1 AND entry.family_id = $2 AND entry.learner_id = $3",
+      [entryId, access.familyId, learnerId],
+    )
+  ).rows[0];
+  if (!row)
+    throw new AccessError(404, "That spoken reflection is unavailable.");
   return row.bytes;
 }

@@ -80,6 +80,30 @@ export function PortfolioEntryView({
       {saved.evidence.map((work) => (
         <blockquote key={work.actionId}>{work.text}</blockquote>
       ))}
+      {saved.audio && (
+        <section
+          className="spoken-reflection"
+          aria-label="My spoken reflection"
+        >
+          <h3>My spoken reflection</h3>
+          <audio
+            controls
+            preload="metadata"
+            aria-label="Saved spoken reflection"
+            src={`/api/learners/${saved.learnerId}/portfolio/${saved.id}/audio`}
+            onError={() =>
+              setError(
+                "Your recording could not be played. Reload this entry to try again.",
+              )
+            }
+          />
+          {!editing && error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
+        </section>
+      )}
       {editing ? (
         <form
           onSubmit={(event) => {
@@ -136,7 +160,10 @@ export function PortfolioEntryView({
         <>
           <h3>My reflection</h3>
           <p className="own-words">
-            {saved.reflection || "I haven’t added a reflection yet."}
+            {saved.reflection ||
+              (saved.audio
+                ? "I kept my reflection in my recording."
+                : "I haven’t added a reflection yet.")}
           </p>
           {!showing && (
             <button className="text-button" onClick={() => setEditing(true)}>

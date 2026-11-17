@@ -978,7 +978,7 @@ select:focus-visible {
   color: var(--muted);
 }
 .work-pad .evidence-dialog textarea {
-  height: 100px;
+  height: 80px;
   min-height: 80px;
   background: var(--white);
   border: 1px solid #a5b1a6;
@@ -1496,6 +1496,47 @@ select:focus-visible {
 }
 .voice-tools .read-aloud small {
   font-size: 11px;
+}
+
+.spoken-reflection {
+  padding: 1rem;
+  margin: 1rem 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f3f6f0;
+}
+.spoken-reflection audio {
+  display: block;
+  width: 100%;
+  margin: 0.75rem 0;
+}
+.spoken-reflection h3 {
+  margin-top: 0;
+}
+.spoken-reflection small {
+  display: block;
+  margin: 0.5rem 0;
+}
+
+.evidence-save-actions {
+  position: sticky;
+  bottom: -26px;
+  background: var(--white);
+  padding: 8px 0 14px;
+  border-top: 1px solid var(--line);
+}
+.evidence-save-actions .primary {
+  margin-top: 0;
+}
+.evidence-save-actions small {
+  display: block;
+  margin-top: 8px;
+}
+.spoken-reflection button {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--white);
 }
 
 .public-sources {
