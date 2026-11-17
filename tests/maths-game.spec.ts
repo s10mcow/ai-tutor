@@ -198,6 +198,75 @@ test.describe("temporary game context", () => {
   });
 });
 
+test("a Learner deliberately keeps only their selected game answer and reason after ending", async ({
+  page,
+}) => {
+  await openWorkspace(page);
+  await page
+    .getByRole("button", { name: "Short maths game", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Start with smaller numbers", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Show an example", exact: true })
+    .click();
+  await page.getByLabel("Tiles in each tray").fill("4");
+  await page
+    .getByLabel("Why did you choose that number?")
+    .fill("I checked with three groups of four.");
+  await page
+    .getByRole("button", { name: "Check my idea", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Try the next delivery" }),
+  ).toBeVisible();
+  const family = await (await page.request.get("/api/family")).json();
+  expect(
+    (
+      await (
+        await page.request.get(
+          `/api/learners/${family.selectedLearnerId}/portfolio`,
+        )
+      ).json()
+    ).entries,
+  ).toEqual([]);
+  await page.getByRole("button", { name: "Save Learning evidence" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("checkbox")).toHaveCount(1);
+  await dialog
+    .getByRole("checkbox", {
+      name: "My answer: 4 tiles in each tray. My reason: I checked with three groups of four.",
+      exact: true,
+    })
+    .check();
+  await page.getByLabel("Entry title").fill("Checking my tile idea");
+  await page
+    .getByLabel("My reflection")
+    .fill("The example helped me choose groups to try.");
+  await page
+    .getByRole("button", { name: "Save to Portfolio", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Saved to your Portfolio",
+  );
+  await page.getByRole("button", { name: "End activity", exact: true }).click();
+  await page.getByRole("button", { name: "My Portfolio", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open Checking my tile idea", exact: true })
+    .click();
+  const entry = page.getByRole("region", { name: "Selected Portfolio entry" });
+  await expect(entry).toContainText("My answer: 4 tiles in each tray.");
+  await expect(entry).toContainText(
+    "My reason: I checked with three groups of four.",
+  );
+  await expect(entry).toContainText(
+    "The example helped me choose groups to try.",
+  );
+  await expect(entry).not.toContainText("6 tiles shared between 2 trays");
+  await expect(entry).not.toContainText("How else could you check your idea?");
+});
+
 test("the game owns its challenge and keeps authoritative attempts isolated and safe to retry", async ({
   page,
   app,

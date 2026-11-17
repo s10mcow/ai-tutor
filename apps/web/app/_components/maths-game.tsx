@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { LearningSession } from "../../../../lib/coaching-contract";
 import type { GameInput } from "../../../../lib/maths-game-contract";
+import { SaveEvidence } from "./save-evidence";
 
 export function MathsGame({
   session,
@@ -320,6 +321,7 @@ export function MathsGame({
                 </ol>
               </details>
             )}
+            <SaveEvidence session={session} />
           </section>
         </div>
       )}

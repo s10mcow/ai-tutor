@@ -975,6 +975,17 @@ select:focus-visible {
   margin-top: 7px;
   color: var(--muted);
 }
+@media (min-width: 1200px) {
+  .activity-discovery > p {
+    max-width: none;
+  }
+  .activity-discovery .activity-choices {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .activity-discovery .activity-choice {
+    padding: 14px;
+  }
+}
 .activity-own-question {
   display: flex;
   align-items: center;
