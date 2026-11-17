@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SaveEvidence } from "./save-evidence";
 import type { Learner } from "../../../../lib/family";
 import type {
   CoachingInput,
@@ -189,6 +190,7 @@ export function CoachingSession({
         <small>
           This scratchpad is temporary. It clears when you leave this workspace.
         </small>
+        {session && <SaveEvidence key={session.id} session={session} />}
       </section>
       <section className="tutor-panel coaching-panel" aria-label="Conversation">
         <div className="coaching-heading">
@@ -344,7 +346,7 @@ export function CoachingSession({
             </form>
             <small>
               This conversation lasts up to 24 hours. End activity clears it
-              now. It is not saved to learning notes or your Portfolio.
+              now. Only work you choose to save stays in your Portfolio.
             </small>
           </>
         )}
