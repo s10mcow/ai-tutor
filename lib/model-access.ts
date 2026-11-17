@@ -35,6 +35,27 @@ function evidence(value: string | undefined): Record<string, unknown> {
     return {};
   }
 }
+export function applicationRetention() {
+  const value = evidence(process.env.TUTOR_APPLICATION_RETENTION_EVIDENCE);
+  const history = value.recoveryHistorySeconds;
+  const verified =
+    !!process.env.CRON_SECRET &&
+    typeof value.evidenceReference === "string" &&
+    /^[a-zA-Z0-9_-]{1,100}$/.test(value.evidenceReference) &&
+    value.hourlyCleanupVerified === true &&
+    value.telemetryControlsVerified === true &&
+    value.restoreProcedureDocumented === true &&
+    value.recoveryRetentionDisclosed === true &&
+    typeof history === "number" &&
+    Number.isInteger(history) &&
+    history >= 0 &&
+    history <= 86400;
+  return {
+    verified,
+    recoveryHistorySeconds:
+      verified && typeof history === "number" ? history : null,
+  };
+}
 export function providerConfiguration(
   kind: "text" | "image" | "transcription" | "research" = "text",
 ): ProviderConfiguration {
@@ -194,6 +215,14 @@ export function providerConfiguration(
       reason: "expired_retention",
       message:
         "The recorded retention approval has expired. Live family access is closed pending verification.",
+    };
+  if (!applicationRetention().verified)
+    return {
+      ...verified,
+      retentionExpiresAt,
+      reason: "unverified_application_retention",
+      message:
+        "Hosted hourly cleanup, recovery-history disclosure, restore procedure, and telemetry controls have not all been verified. Live requests remain closed.",
     };
   return {
     ...verified,

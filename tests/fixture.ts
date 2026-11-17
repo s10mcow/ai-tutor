@@ -82,6 +82,8 @@ export const test = base.extend<{
         OPENAI_API_KEY: "",
         TUTOR_FUNDING_EVIDENCE: "",
         TUTOR_RETENTION_EVIDENCE: "",
+        TUTOR_APPLICATION_RETENTION_EVIDENCE: "",
+        CRON_SECRET: "",
         TUTOR_OPENAI_FIXTURE_URL:
           modelEnvironment.TUTOR_OPENAI_FIXTURE_URL === "fixture"
             ? openai.url

@@ -2,6 +2,10 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import type { Learner } from "../../../../lib/family";
+import type {
+  PilotReadiness,
+  FamilyState,
+} from "../../../../lib/model-access-contract";
 
 import { ModelAccessPanel } from "./model-access";
 import { Workspace } from "./workspace";
@@ -44,6 +48,32 @@ export function Studio() {
   const [switching, setSwitching] = useState(false);
   const [selected, setSelected] = useState<Learner | null>(null);
   const [error, setError] = useState("");
+  const [readiness, setReadiness] = useState<PilotReadiness | null>(null);
+  useEffect(() => {
+    if (!family) {
+      setReadiness(null);
+      return;
+    }
+    const controller = new AbortController();
+    const refresh = async () => {
+      try {
+        const response = await fetch("/api/model-access", {
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const value = await response.json();
+        if (!controller.signal.aborted) setReadiness(value);
+      } catch {
+        /* The server always rechecks access before a chargeable operation. */
+      }
+    };
+    void refresh();
+    const timer = setInterval(refresh, 15000);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [family]);
   async function load() {
     const response = await fetch("/api/family");
     if (response.status === 401) {
@@ -91,8 +121,16 @@ export function Studio() {
       <header className="site-header">
         <Brand />
         <div className="header-actions">
-          <span className="preview-label">Fictional-data preview</span>
-          {family && <ModelAccessPanel />}
+          <span className="preview-label">
+            {!family || !readiness
+              ? "Private family space"
+              : readiness.familyState === "live"
+                ? "Family learning"
+                : readiness.familyState === "paused"
+                  ? "Family AI paused"
+                  : "Fictional-data preview"}
+          </span>
+          {family && <ModelAccessPanel onAccess={setReadiness} />}
           {family && (
             <button
               className="text-button"
@@ -131,6 +169,7 @@ export function Studio() {
             family={family}
             onChange={load}
             onSelect={select}
+            familyState={readiness?.familyState ?? null}
           />
         )}
       </main>
@@ -257,8 +296,8 @@ function ParentAccess({ onSuccess }: { onSuccess: () => Promise<void> }) {
           {setup ? "Back to sign in" : "Set up family access"}
         </button>
         <p className="privacy-note">
-          Preview with fictional names only. Live learning with the Tutor has
-          not been activated.
+          After signing in, check Model access before adding personal
+          information. Use fictional information until family setup is verified.
         </p>
       </section>
     </div>
@@ -270,7 +309,9 @@ function LearnerPicker({
   onChange,
   onSelect,
   busy,
+  familyState,
 }: {
+  familyState: FamilyState | null;
   busy: boolean;
   family: Family;
   onChange: () => Promise<void>;
@@ -328,7 +369,13 @@ function LearnerPicker({
         <div>
           <p className="eyebrow">PARENT SETUP</p>
           <h2>A space of their own.</h2>
-          <p>Add a fictional Learner name for this preview.</p>
+          <p>
+            {familyState === "setup"
+              ? "Add a fictional Learner name for this preview."
+              : familyState
+                ? "Add a Learner name for your family."
+                : "Check Model access before adding personal information."}
+          </p>
         </div>
         <form onSubmit={add}>
           <label htmlFor="learner-name">Learner name</label>

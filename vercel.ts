@@ -1,5 +1,6 @@
 import { withEve } from "eve/vercel";
 export default await withEve({
+  crons: [{ path: "/api/cron/purge-sessions", schedule: "50 * * * *" }],
   services: {
     web: {
       framework: "nextjs",

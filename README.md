@@ -1,10 +1,12 @@
 # Learning Studio
 
-A private family workspace with one parent account, separate Learner profiles, and a remembered profile on each trusted browser. This preview accepts fictional information only. Typed activities support questions, hints, examples, attempts, corrections, and pace changes through a controlled local Tutor service. Live model and speech access remain closed.
+A private hosted learning space with one parent account and separate Learner profiles. Learners choose workbook coaching, paper art, biking exploration, AI literacy, a short maths game or another interest. They can type, review spoken input, confirm/correct uploaded pictures, ask for hints or a different explanation, try a fresh challenge and check public sources. Brief learner-stated notes support return visits. Learners deliberately save their own written work, selected pictures and new spoken reflections in a Portfolio to show their parent.
+
+The [hosted website](https://ai-tutor-ten-puce.vercel.app) uses the authorized existing Vercel Pro and Neon Launch accounts. Its canonical URL reaches application sign-in; family data requires application authentication. It remains a fictional-data preview until actual model funding and provider/application retention prerequisites are verified. A subscription or API key alone does not activate live family learning. **Model access** shows setup, live or paused status, individual operation gates, and the app allowance; saved work remains available during outages or exhausted allowance.
 
 ## Run locally
 
-Requirements: Node 26 (`.nvmrc` pins 26.13.1), npm, and PostgreSQL 16 or newer. The app needs a PostgreSQL database you control; it does not create a hosted resource.
+Use Node 26 (`.nvmrc` pins 26.13.1), npm and PostgreSQL 16+. The app does not provision a database.
 
 ```sh
 nvm use
@@ -12,109 +14,44 @@ npm ci
 cp .env.example .env
 ```
 
-Fill in `.env`:
-
-| Variable              | Value                                                                                                |
-| --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`        | Connection string for your application database; use the provider's TLS settings for hosted storage. |
-| `BETTER_AUTH_URL`     | The browser's exact origin, locally `http://localhost:3000`.                                         |
-| `BETTER_AUTH_SECRET`  | A new random secret of at least 32 characters.                                                       |
-| `FAMILY_SETUP_CODE`   | A separate private invitation code of at least 16 characters.                                        |
-| `FAMILY_SETUP_EMAILS` | The invited parent's email address.                                                                  |
-
-Generate each secret separately with `openssl rand -hex 32`. Keep `.env` private. Startup does not automatically migrate databases; apply the versioned migrations explicitly:
+Set `DATABASE_URL`, the exact `BETTER_AUTH_URL` origin, independently generated `BETTER_AUTH_SECRET` and `FAMILY_SETUP_CODE`, and the invited parent's `FAMILY_SETUP_EMAILS`. Generate each secret separately with `openssl rand -hex 32`; never commit them. Use verified TLS for hosted PostgreSQL. Apply append-only migrations explicitly:
 
 ```sh
 npm run db:migrate
 npm run dev
 ```
 
-`npm run dev` runs the complete Next.js and eve service graph through `vercel dev --local`, without requiring a linked Vercel project. Open `http://localhost:3000`, choose **Set up family access**, and use the invited parent email and setup code. Add two fictional Learners such as River and Sky. The Learners need no email addresses.
+`npm run dev` runs the full Next.js/eve service graph locally without a linked cloud project. Open `http://localhost:3000`, choose **Set up family access**, and enter the invited email and private setup code. Before live prerequisites pass, add fictional Learners such as River and Sky. They need no email addresses. A trusted browser session lasts up to 30 days; sign out on shared/public computers.
 
-`npm run dev:web` runs only the web service for focused interface work. Root `.env` values are loaded by these scripts. `npm run build` builds both services; `npm run start:web` runs the built web service alone. The deployed composition is defined in `vercel.ts`.
+`npm run dev:web` runs only Next.js. `npm run build` builds Next.js and eve; `npm run start:web` serves the built web app alone. Root `vercel.ts` defines the hosted service graph and hourly cleanup. Keep app authentication and deployment protection; a Vercel automation bypass does not authorize family APIs or cleanup.
 
-## Verify the workspace
+## Fictional coaching and verification
 
-Install the browser once:
+For a small manual scripted demonstration, run `npm run preview:tutor` in one terminal and `TUTOR_PREVIEW_URL=http://127.0.0.1:4321 npm run dev:web` in another. Ask how to share 24 pencils among six cups. This local fixed script demonstrates controls, not arbitrary teaching or model quality. Production ignores it. The automated browser fixtures instead control external model/transcription/research HTTP while retaining real browser behavior, auth and isolated PostgreSQL.
 
 ```sh
 npx playwright install chromium
-npm run test:browser -- tests/family-workspace.spec.ts
-npm run test:browser -- tests/text-coaching.spec.ts
-npm run test:browser -- tests/model-access.spec.ts
+npm run test:browser -- tests/pilot-readiness.spec.ts
+npm run test:browser -- tests/session-cleanup.spec.ts
+npm run test:browser -- tests/pilot-journeys.spec.ts
 npm run typecheck
 npm run build
 ```
 
-The browser harness starts a fresh temporary PostgreSQL cluster on an available port for every scenario. It uses real Better Auth and HTTP requests, fictional profiles, and no internal mocks. It shuts down and removes its own storage afterward. Existing databases are never used. On macOS it defaults to `/opt/homebrew/opt/postgresql@16/bin`; set `TEST_PG_BIN` to the directory containing `initdb` and `pg_ctl` elsewhere.
+Choose the file or `-g "scenario text"` covering a change; do not run every test by default. Each scenario owns a temporary PostgreSQL cluster, removes it afterward, and never uses an existing database. Set `TEST_PG_BIN` if PostgreSQL tools are not at `/opt/homebrew/opt/postgresql@16/bin`. `TEST_APP_MODE=services npm run test:browser -- tests/family-workspace.spec.ts -g "parent establishes"` checks the complete local service composition. Generated screenshots/traces remain in ignored `test-results/` and contain fictional test data only.
 
-The return scenario restarts the actual application process against the same isolated database, then opens a new browser context with the trusted session cookie. The switching scenario delays a real HTTP response to check the pending state. Screenshots and failure traces are under ignored `test-results/`.
+## Privacy, saved work and model allowance
 
-Verify the same complete service command used for local development:
+Every family/session/note/Portfolio/media route checks server-side ownership. Profile switching disposes of previous session/media/delayed-response UI. Images and deliberately saved audio are private PostgreSQL assets, never public upload URLs. Ordinary speech is temporary, transcribed only after recording, and reviewed before sending. Explicit spoken Portfolio saves use a separate recording and no model request. Read-aloud requires an installed local device voice; test the actual computer's microphone and speakers before use.
 
-```sh
-TEST_APP_MODE=services npm run test:browser -- tests/family-workspace.spec.ts -g "parent establishes"
-```
+Activities expire after at most 24 hours from creation; reads do not extend their life. End activity deletes current context. Hourly native cleanup deletes expired session/action/unsaved-picture rows from active tables; outages can delay scheduling. Database recovery history may retain earlier states for a further 24 hours on the configured hosted project. This is not a promise of universal per-record erasure at 24 hours. Learning notes and deliberate Portfolio copies remain until deleted. [The operator runbook](docs/pilot-operations.md) covers scheduled proof, recovery history, telemetry, restore safeguards and failure recovery.
 
-Run one scenario with `-g "scenario text"` when changing a narrow behavior. Do not run every future ticket's tests by default.
+All chargeable operations share a transactional allowance. Text/image requests reserve $3.718, transcription up to $0.0045, and public-source checks $7.446 before dispatch. Valid authoritative usage releases proven unused reservation; unknown outcomes keep the full hold. These conservative ceilings are admission requirements, not predictions of typical cost. A retry is a separate reserved attempt. The meter is not a provider live balance check. No automatic credit purchase, recharge, allowance increase, provider fallback or new cloud resource is enabled.
 
-## Access and ownership
+Direct Sol runs Standard foreground Responses with `store:false`, explicit caching without breakpoints and no automatic application retry. Public-source checks permit only the built-in read-only web search capability; external source text cannot grant tools. eve's separate routes remain closed, without model/tool access or content tracing. Endpoint-specific retention approval and the hosted application-retention evidence gate every live provider request. See [model-access contract](docs/ticket-drafts/03-verification.md), [public-source contract](docs/ticket-drafts/13-verification.md), and [activation and account-recovery steps](docs/pilot-operations.md).
 
-- Better Auth handles parent password hashing, session cookies, origin checks, and sign-out. Setup requires both a server-configured email invitation and the private setup code, including requests sent directly to the auth API.
-- A trusted browser session lasts up to 30 days and renews while active. Sign out on public computers. A new authenticated browser session selects its own Learner independently.
-- `lib/family.ts` resolves family identity from the authenticated session. Learner IDs are selectors; every read and write constrains ownership on the server. Selection belongs to the auth session, not a global family preference.
-- The scratchpad is temporary browser state. Switching unmounts the previous workspace immediately, and no new workspace opens while selection is pending. It is not saved in local storage or sent to the Tutor.
-- eve has no exposed tools, all session access is denied, model calls are blocked, and sandbox creation is disabled. Later tickets must add app-owned learning-session authorization and metering before opening access. There is no development authentication bypass.
+## Deployment and remaining pilot checks
 
-## Hosted preview
+Use this repository root, Node 26 and the existing `vercel.ts`. Set server environment on the intended production target, run migrations through ticket 14 against the correct database, deploy the exact tested commit, and verify the native cron. `CRON_SECRET` is independent of family login and model credentials. Follow [the deployment verification recipe](docs/ticket-drafts/14-verification.md) before claiming hosted cleanup or telemetry evidence.
 
-The code is prepared for a Vercel project with managed PostgreSQL. Use this repository's root as the project root, Node 26, and the root `vercel.ts`; it composes Next.js and eve under one origin. Set all five environment variables above on the target deployment, with `BETTER_AUTH_URL` matching the actual preview URL, then run migrations against the intended hosted database before verification. Use deployment protection as available and retain application authentication.
-
-The parent authorized their existing Neon Launch and Vercel Pro accounts, and the [private fictional-data preview](https://ai-tutor-ten-puce.vercel.app) now runs on those services. Hosted parent setup, two profiles, switching, a fresh-browser return and unauthenticated denial passed; see [hosted verification](docs/ticket-drafts/01-verification.md). Deployment protection remains enabled. This is not activation of live-family AI.
-
-Live-family account/retention evidence and real-model teaching evaluation remain final-pilot gates. Ticket 03 adds a direct Sol adapter and transactional allowance enforcement, exercised only with a controlled HTTP provider. No OpenAI key is needed for fictional fixtures.
-
-## Temporary typed activities
-
-Choose **Start an activity**, type a fictional question, and use the hint, example, attempt, correction, or pace controls. The browser scenarios supply a local HTTP Tutor with controlled replies and failures; the real application still enforces parent authentication, Learner ownership, and PostgreSQL persistence. Without a configured service the app preserves the question and offers retry or End activity. `TUTOR_PREVIEW_URL` is development-only and must point to `http://127.0.0.1:<port>`; production never dispatches through it. No key, live provider, paid fallback, or publicly reachable eve route is enabled.
-
-Each Learner has one current activity. Its question and turns survive reloads and web-process restarts for a fixed maximum of **24 hours from creation**, without extending on use. `TUTOR_SESSION_RETENTION_SECONDS` can shorten that period, never lengthen it. An activity accepts at most 40 Learner actions, with 2,000 characters per input and 6,000 per Tutor reply. Scratchpad contents remain local temporary state and are never sent to the provider.
-
-**End activity immediately deletes the activity and its turns.** Expired activities cannot be read or resumed. Session access opportunistically deletes expired records, and `npm run sessions:purge` deletes them without waiting for another visit. The hosted deployment must schedule that command at least hourly and verify deletion before live-family activation. Until the scheduler is installed, logical expiry is enforced but physical deletion during idle periods is not guaranteed. Database backups need a separately verified retention policy. Current activity context is distinct from later learning notes and explicit Portfolio saves.
-
-Submitted actions keep their identity across retries. Replaying a completed or pending action returns its existing state; changed input with the same identity is rejected. Failed replies retain the input, and a retry creates a new provider-attempt identity for the same Learner turn. The local provider timeout is 15 seconds; an orphaned pending action becomes retryable after 30 seconds. These are application recovery rules, not proof of zero provider spend after an ambiguous failure. Each chargeable attempt now reserves allowance before dispatch; uncertain outcomes retain the full reservation.
-
-Implementation and follow-on contracts are recorded in [ticket 02 verification](docs/ticket-drafts/02-verification.md).
-
-### Try the fictional coaching demo manually
-
-After the local setup and migrations above, open two terminals in this repository with Node 26 selected. In the first:
-
-```sh
-npm run preview:tutor
-```
-
-In the second:
-
-```sh
-TUTOR_PREVIEW_URL=http://127.0.0.1:4321 npm run dev:web
-```
-
-Open `http://localhost:3000`, sign in with your invited fictional parent account, and choose a fictional Learner. Start an activity and ask **How can I share 24 pencils equally among 6 cups?** Try **Show an example**, share an attempt, then choose **Correct question** and change 24 to 30 pencils. The service is a fixed pencil-sharing script: it demonstrates the controls and context, and does not evaluate answers or support arbitrary topics. The page labels it **Scripted Tutor preview**.
-
-To simulate one service failure, run this in another terminal before the next action:
-
-```sh
-curl -X POST http://127.0.0.1:4321/fail-next
-```
-
-Send an attempt or request a hint, reload to see the saved input, and choose **Retry reply**. The retry succeeds without adding another Learner turn. **End activity** clears the temporary conversation. Stop the preview service and web server with Ctrl-C. This demo uses your configured local application database; automated tests instead create and delete an isolated PostgreSQL cluster.
-
-
-## Read-only model access and allowance
-
-The authenticated **Model access** panel shows credential/funding/retention readiness, measured usage, pending reservations, unresolved usage, and remaining app allocation. It cannot change configuration. A Pro subscription alone never activates the adapter, and the app meter is not the provider's live credit balance.
-
-The direct text path uses `gpt-6.1-sol`, Standard tier, foreground Responses, `store:false`, explicit caching with no breakpoints, no tools and no automatic retries. It reserves a conservative **$3.718 per attempt** against the shared PostgreSQL allowance before any HTTP dispatch, then settles measured tokens (including reasoning). Small requests normally use much less; insufficient reservation headroom still blocks them. A disconnected or unverifiable response retains the full reservation. Retrying a failed action is a new metered attempt; completed/pending actions replay without another dispatch.
-
-Live access requires a server-side key, valid subscription-grant evidence, exclusive use of the linked organization through this app's ledger, account-level absence of purchased-credit/recharge/unapproved postpaid paths, and matching approved provider/application retention evidence. Readiness expires at the earliest recorded grant, account-evidence or retention expiry; the last-check timestamp is informational and does not require 15-minute manual reapproval. Refreshing evidence preserves the allocation and all charges/holds. Other applications or direct provider calls cannot share the organization outside this ledger; an uncoordinated "free-grant-only" claim is insufficient. The default remains closed. No provider balance probe, credit purchase, limit change, fallback provider, or cloud resource is created by this code. Operator evidence fields, the extension boundary for future operations, and remaining activation checks are documented in [ticket 03 verification](docs/ticket-drafts/03-verification.md).
+Actual API-credit eligibility/activation/balance, under-13 project/endpoint approval, synthetic real-model evaluation, real child/device usability, and the physical parent-computer-off trial remain external observations. Controlled journeys prove app behavior only. The [synthetic evaluation](docs/evaluations/14-private-pilot.md) is defined and unrun; it must use the real app boundary after permitted access is established. The pilot does not measure long-term educational outcomes.
