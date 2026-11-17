@@ -9,6 +9,8 @@ import { TutorAccessNote } from "./model-access";
 import type { Learner } from "../../../../lib/family";
 import { ActivityDiscovery } from "./activity-discovery";
 import { MathsGame } from "./maths-game";
+import { CoachingChoices } from "./coaching-choices";
+import { currentFreshChallenge } from "../../../../lib/coaching-contract";
 import type { ActivityLaunch } from "../../../../lib/activity-contract";
 import type {
   CoachingInput,
@@ -47,6 +49,7 @@ export function CoachingSession({
   const [loading, setLoading] = useState(true);
   const [capturing, setCapturing] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [changingBreak, setChangingBreak] = useState(false);
   const activityVersion = useRef(0);
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState("");
@@ -59,11 +62,19 @@ export function CoachingSession({
   const lastAction = session?.actions.at(-1);
   const failed = lastAction?.status === "failed" ? lastAction : null;
   const waiting = lastAction?.status === "pending";
-  const imageUnconfirmed = session?.images.some(
+  const paused = !!session?.breakState?.paused;
+  const imageUnconfirmed = !!session?.images.some(
     (image) => image.status !== "confirmed",
   );
   const blocked =
-    busy || ending || waiting || !!failed || !!unsent || imageUnconfirmed;
+    busy ||
+    ending ||
+    changingBreak ||
+    paused ||
+    waiting ||
+    !!failed ||
+    !!unsent ||
+    imageUnconfirmed;
   function receive(value: LearningSession | null) {
     setSession(value);
     const last = value?.actions.at(-1);
@@ -77,7 +88,14 @@ export function CoachingSession({
     lifetime.current = controller;
     sessionRequest(url, controller.signal)
       .then((value) => {
-        if (!controller.signal.aborted) receive(value);
+        if (!controller.signal.aborted) {
+          receive(value);
+          if (value?.breakState) {
+            onDraftChange(value.breakState.scratchpad);
+            setText(value.breakState.message);
+            setIntent(value.breakState.intent);
+          }
+        }
       })
       .catch((error) => {
         if (!controller.signal.aborted) setError(error.message);
@@ -153,8 +171,47 @@ export function CoachingSession({
         setBusy(false);
     }
   }
+  async function changeBreak(next: "pause" | "resume") {
+    if (!session || busy || ending || changingBreak) return;
+    const signal = lifetime.current!.signal;
+    const version = activityVersion.current;
+    setChangingBreak(true);
+    setError("");
+    try {
+      const value = await sessionRequest(
+        `${url}/${session.id}`,
+        signal,
+        next === "pause"
+          ? {
+              intent: next,
+              scratchpad: draft,
+              message: text,
+              messageIntent: intent,
+            }
+          : { intent: next },
+      );
+      if (!signal.aborted && version === activityVersion.current) {
+        setSession(value);
+        if (value?.breakState) {
+          onDraftChange(value.breakState.scratchpad);
+          setText(value.breakState.message);
+          setIntent(value.breakState.intent);
+        }
+      }
+    } catch (error) {
+      if (!signal.aborted && version === activityVersion.current)
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Your break could not be saved. Please try again.",
+        );
+    } finally {
+      if (!signal.aborted && version === activityVersion.current)
+        setChangingBreak(false);
+    }
+  }
   async function end() {
-    if (!session || ending) return;
+    if (!session || ending || changingBreak) return;
     const signal = lifetime.current!.signal;
     activityVersion.current += 1;
     setEnding(true);
@@ -181,6 +238,7 @@ export function CoachingSession({
     void send({ id: crypto.randomUUID(), intent: nextIntent, text: nextText });
   }
   const hasQuestion = !!session?.problem;
+  const freshChallenge = currentFreshChallenge(session?.actions ?? []);
   const separateInterest =
     session?.activity?.kind === "biking"
       ? "biking"
@@ -192,7 +250,9 @@ export function CoachingSession({
       ? "Ask Tutor"
       : intent === "correction"
         ? "Correct question"
-        : "Share attempt";
+        : intent === "attempt"
+          ? "Share attempt"
+          : "Send message";
   if (!loading && !session)
     return (
       <>
@@ -262,11 +322,28 @@ export function CoachingSession({
               "Bring a question. There’s room to work it out here."}
           </p>
         )}
+        {freshChallenge && (
+          <section className="fresh-challenge" aria-label="Fresh challenge">
+            <h3>Fresh challenge · your own way</h3>
+            <p>{freshChallenge.reply}</p>
+            <small>
+              Try your reasoning first. Help is here if you choose it.
+            </small>
+          </section>
+        )}
         {session && (
           <SessionPicture
             key={`picture-${session.id}`}
             session={session}
-            disabled={busy || ending || waiting || !!failed || !!unsent}
+            disabled={
+              busy ||
+              ending ||
+              changingBreak ||
+              paused ||
+              waiting ||
+              !!failed ||
+              !!unsent
+            }
             onChange={receive}
           />
         )}
@@ -274,11 +351,15 @@ export function CoachingSession({
         <textarea
           id="scratchpad"
           value={draft}
+          maxLength={4000}
+          disabled={paused || changingBreak}
           onChange={(event) => onDraftChange(event.target.value)}
           placeholder="I could try…"
         />
         <small>
-          This scratchpad is temporary. It clears when you leave this workspace.
+          Take a break saves your scratchpad and unsent message until this
+          activity expires (up to 24 hours). Other unsaved edits clear when you
+          leave.
         </small>
         {session && (
           <SaveEvidence key={`evidence-${session.id}`} session={session} />
@@ -298,9 +379,24 @@ export function CoachingSession({
             <h2>Your Tutor</h2>
           </div>
           {session && (
-            <button className="text-button" onClick={end} disabled={ending}>
-              End activity
-            </button>
+            <div className="coaching-heading-actions">
+              {!paused && (
+                <button
+                  className="text-button"
+                  disabled={blocked}
+                  onClick={() => changeBreak("pause")}
+                >
+                  Take a break
+                </button>
+              )}
+              <button
+                className="text-button"
+                onClick={end}
+                disabled={ending || changingBreak}
+              >
+                End activity
+              </button>
+            </div>
           )}
         </div>
         <TutorAccessNote />
@@ -327,11 +423,19 @@ export function CoachingSession({
               tabIndex={0}
               ref={conversation}
             >
-              {session.actions.map((entry) => (
+              {session.actions.map((entry, index) => (
                 <li key={entry.id}>
                   <div className="learner-turn">
                     <strong>
-                      You{entry.intent === "correction" ? " · correction" : ""}
+                      You
+                      {entry.intent === "correction"
+                        ? " · correction"
+                        : entry.intent === "attempt" &&
+                            currentFreshChallenge(
+                              session.actions.slice(0, index),
+                            )
+                          ? " · Fresh challenge attempt"
+                          : ""}
                     </strong>
                     <p>{entry.text}</p>
                   </div>
@@ -378,83 +482,85 @@ export function CoachingSession({
                 Retry reply
               </button>
             )}
-            {hasQuestion && (
-              <div className="coaching-controls" aria-label="Coaching choices">
+            {!paused && hasQuestion && (
+              <CoachingChoices blocked={blocked} onAction={action} />
+            )}
+            {paused ? (
+              <div className="break-notice">
+                <p role="status">
+                  Activity paused. Your question, conversation and drafts are
+                  saved until this activity expires. Come back when you are
+                  ready.
+                </p>
                 <button
-                  disabled={blocked}
-                  onClick={() => action("hint", "Please give me a hint.")}
+                  className="primary"
+                  disabled={changingBreak || ending}
+                  onClick={() => changeBreak("resume")}
                 >
-                  Give me a hint
-                </button>
-                <button
-                  disabled={blocked}
-                  onClick={() =>
-                    action("example", "Please show me an example.")
-                  }
-                >
-                  Show an example
-                </button>
-                <button
-                  disabled={blocked}
-                  onClick={() => action("slower", "Please slow down.")}
-                >
-                  Slow down
-                </button>
-                <button
-                  disabled={blocked}
-                  onClick={() =>
-                    action("independent", "Let me try independently.")
-                  }
-                >
-                  Let me try
+                  Resume activity
                 </button>
               </div>
-            )}
-            <VoiceMessage
-              key={session.id}
-              url={`${url}/${session.id}`}
-              disabled={blocked}
-              onUse={setText}
-              onActive={setCapturing}
-            />
-            <form
-              onSubmit={(event: FormEvent) => {
-                event.preventDefault();
-                action(intent, text);
-              }}
-            >
-              {hasQuestion && (
-                <>
-                  <label htmlFor="message-purpose">Message purpose</label>
-                  <select
-                    id="message-purpose"
-                    value={intent}
-                    onChange={(event) =>
-                      setIntent(event.target.value as CoachingIntent)
-                    }
+            ) : (
+              <>
+                <VoiceMessage
+                  key={`voice-${session.id}`}
+                  url={`${url}/${session.id}`}
+                  disabled={blocked}
+                  onUse={setText}
+                  onActive={setCapturing}
+                />
+                <form
+                  onSubmit={(event: FormEvent) => {
+                    event.preventDefault();
+                    action(intent, text);
+                  }}
+                >
+                  {hasQuestion && (
+                    <>
+                      <label htmlFor="message-purpose">Message purpose</label>
+                      <select
+                        id="message-purpose"
+                        value={intent}
+                        onChange={(event) =>
+                          setIntent(event.target.value as CoachingIntent)
+                        }
+                        disabled={blocked}
+                      >
+                        <option value="attempt">Share attempt</option>
+                        <option value="question">Ask a question</option>
+                        <option value="evidence">
+                          Check supplied evidence
+                        </option>
+                        <option value="challenge">
+                          Question the Tutor’s claim
+                        </option>
+                        <option value="correction">Correct question</option>
+                      </select>
+                    </>
+                  )}
+                  <p className="reasoning-prompt">
+                    What did you try, why, and what could change your mind?
+                  </p>
+                  <label htmlFor="coaching-text">
+                    {hasQuestion ? "Your message" : "Your question"}
+                  </label>
+                  <textarea
+                    id="coaching-text"
+                    value={text}
+                    onChange={(event) => setText(event.target.value)}
+                    maxLength={2000}
+                    required
                     disabled={blocked}
+                  />
+                  <button
+                    className="primary"
+                    disabled={blocked || !text.trim()}
                   >
-                    <option value="attempt">Share attempt</option>
-                    <option value="question">Ask a question</option>
-                    <option value="correction">Correct question</option>
-                  </select>
-                </>
-              )}
-              <label htmlFor="coaching-text">
-                {hasQuestion ? "Your message" : "Your question"}
-              </label>
-              <textarea
-                id="coaching-text"
-                value={text}
-                onChange={(event) => setText(event.target.value)}
-                maxLength={2000}
-                required
-                disabled={blocked}
-              />
-              <button className="primary" disabled={blocked || !text.trim()}>
-                {submitLabel} <span aria-hidden="true">↗</span>
-              </button>
-            </form>
+                    {submitLabel} <span aria-hidden="true">↗</span>
+                  </button>
+                </form>
+              </>
+            )}
             <small>
               This conversation lasts up to 24 hours. End activity clears it
               now. Only learning notes and Portfolio work you choose to save
