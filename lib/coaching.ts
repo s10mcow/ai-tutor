@@ -9,8 +9,10 @@ import type {
 } from "./coaching-contract.ts";
 import { coachingIntents, type CoachingIntent } from "./coaching-contract.ts";
 import { tutorReply } from "./tutor-provider.ts";
+import { readLearningNotes } from "./learning-notes.ts";
 import { parseActivity } from "./activities.ts";
 import type { ActivityChoice } from "./activity-contract.ts";
+import type { MathsGame } from "./maths-game-contract.ts";
 
 // Never extend an activity by reading it. Deployment may choose a shorter TTL.
 function retentionSeconds() {
@@ -30,6 +32,7 @@ type SessionRow = {
   learner_id: string;
   problem: string;
   activity: ActivityChoice | null;
+  game: MathsGame | null;
   expires_at: Date;
 };
 async function snapshot(row: SessionRow): Promise<LearningSession> {
@@ -48,6 +51,7 @@ async function snapshot(row: SessionRow): Promise<LearningSession> {
     learnerId: row.learner_id,
     problem: row.problem,
     activity: row.activity,
+    game: row.game,
     expiresAt: row.expires_at.toISOString(),
     actions,
     images: await sessionImages(row.id),
@@ -70,7 +74,23 @@ export async function startSession(
   input: unknown = {},
 ) {
   await requireLearner(access, learnerId);
-  const activity = parseActivity(input);
+  let activity = parseActivity(input);
+  if (
+    input &&
+    typeof input === "object" &&
+    "resume" in input &&
+    input.resume === true
+  ) {
+    const notes = await readLearningNotes(access, learnerId);
+    if (!notes?.nextStep)
+      throw new AccessError(404, "No saved next step. Choose a new activity.");
+    activity = {
+      kind: "custom",
+      title: "Continue your next step",
+      purpose: notes.nextStep,
+      starter: notes.nextStep,
+    };
+  }
   await purgeExpiredSessions();
   const row = (
     await database.query<SessionRow>(
@@ -136,7 +156,12 @@ export async function submitAction(
     );
     return null;
   }
-  await readSession(access, learnerId, sessionId);
+  const current = await readSession(access, learnerId, sessionId);
+  if (current.activity?.kind === "maths-game")
+    throw new AccessError(
+      400,
+      "Use the game controls to try an idea or get help with this delivery.",
+    );
   const action = parseInput(input);
   const attemptId = randomUUID();
   let dispatch = false;
@@ -241,6 +266,7 @@ export async function submitAction(
           kind: image.kind,
           description: image.confirmedDescription!,
         })),
+      learningNotes: await readLearningNotes(access, learnerId),
     });
     await database.query(
       "UPDATE learning_action SET reply = $3, status = 'complete' WHERE session_id = $1 AND id = $2 AND attempt_id = $4 AND status = 'pending'",

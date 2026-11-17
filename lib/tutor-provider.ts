@@ -2,7 +2,10 @@ import { solReply } from "./sol-provider.ts";
 import type { CoachingAction } from "./coaching-contract.ts";
 import type { ActivityChoice } from "./activity-contract.ts";
 
+import type { LearningNotes } from "./learning-notes-contract.ts";
+
 export type TutorRequest = {
+  learningNotes: LearningNotes | null;
   familyId: string;
   learnerId: string;
   sessionId: string;

@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SessionPicture } from "./session-picture";
+import { RememberNotes, ReturnVisit } from "./learning-notes";
 import { SaveEvidence } from "./save-evidence";
 import { TutorAccessNote } from "./model-access";
 import type { Learner } from "../../../../lib/family";
 import { ActivityDiscovery } from "./activity-discovery";
+import { MathsGame } from "./maths-game";
 import type { ActivityLaunch } from "../../../../lib/activity-contract";
 import type {
   CoachingInput,
@@ -109,7 +111,7 @@ export function CoachingSession({
   useEffect(() => {
     conversation.current?.scrollTo({ top: conversation.current.scrollHeight });
   }, [session]);
-  async function start(activity?: ActivityLaunch) {
+  async function start(activity?: ActivityLaunch, resume = false) {
     const signal = lifetime.current!.signal;
     setBusy(true);
     setError("");
@@ -117,7 +119,7 @@ export function CoachingSession({
       const value = await sessionRequest(
         url,
         signal,
-        activity ? { activity } : {},
+        resume ? { resume: true } : activity ? { activity } : {},
       );
       if (!signal.aborted) receive(value);
     } catch (error) {
@@ -196,8 +198,25 @@ export function CoachingSession({
             {error}
           </p>
         )}
-        <ActivityDiscovery busy={busy} onChoose={start} />
+        <ReturnVisit
+          learnerId={learner.id}
+          busy={busy}
+          onResume={() => void start(undefined, true)}
+        >
+          <ActivityDiscovery busy={busy} onChoose={start} />
+        </ReturnVisit>
       </>
+    );
+  if (session?.activity?.kind === "maths-game")
+    return (
+      <MathsGame
+        key={session.id}
+        session={session}
+        onChange={receive}
+        onEnd={end}
+        ending={ending}
+        sessionError={error}
+      />
     );
   return (
     <div className="work-columns coaching-columns">
@@ -251,6 +270,13 @@ export function CoachingSession({
           This scratchpad is temporary. It clears when you leave this workspace.
         </small>
         {session && <SaveEvidence key={session.id} session={session} />}
+        {session?.actions.some((action) => action.status === "complete") && (
+          <RememberNotes
+            key={`notes-${session.id}`}
+            learnerId={learner.id}
+            sessionId={session.id}
+          />
+        )}
       </section>
       <section className="tutor-panel coaching-panel" aria-label="Conversation">
         <div className="coaching-heading">
@@ -405,7 +431,8 @@ export function CoachingSession({
             </form>
             <small>
               This conversation lasts up to 24 hours. End activity clears it
-              now. Only work you choose to save stays in your Portfolio.
+              now. Only learning notes and Portfolio work you choose to save
+              stay.
             </small>
           </>
         )}
