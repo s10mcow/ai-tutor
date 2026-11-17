@@ -1,3 +1,5 @@
+import type { ActivityChoice } from "./activity-contract.ts";
+
 export const coachingIntents = [
   "question",
   "correction",
@@ -19,6 +21,7 @@ export type LearningSession = {
   id: string;
   learnerId: string;
   problem: string;
+  activity: ActivityChoice | null;
   expiresAt: string;
   actions: CoachingAction[];
 };

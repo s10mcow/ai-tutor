@@ -158,6 +158,7 @@ test("switching Learners clears the prior draft while the selection request is p
 }) => {
   await setUpFamily(page);
   await page.getByRole("button", { name: "Open River’s workspace" }).click();
+  await page.getByRole("button", { name: "Start an activity" }).click();
   await page.getByLabel("My scratchpad").fill("River’s temporary idea");
   let finishSelection!: () => void;
   const heldSelection = new Promise<void>((resolve) => {
@@ -181,6 +182,7 @@ test("switching Learners clears the prior draft while the selection request is p
   await expect(
     page.getByRole("heading", { name: "Sky’s learning workspace" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Start an activity" }).click();
   await expect(page.getByLabel("My scratchpad")).toHaveValue("");
   await page.getByRole("button", { name: "Switch Learner" }).click();
   await page.getByRole("button", { name: "Open River’s workspace" }).click();
