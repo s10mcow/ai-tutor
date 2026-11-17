@@ -6,7 +6,7 @@ The authenticated read-only **Model access** panel and `GET /api/model-access` d
 
 `lib/tutor-provider.ts` retains the explicitly selected local scripted development preview. Otherwise it uses `lib/sol-provider.ts`: direct OpenAI Responses at the fixed production URL, `gpt-6.1-sol`, `service_tier: default`, `store:false`, foreground, 2,000 maximum output tokens, no tools, no conversation/files/previous-response state, no implicit cache breakpoint or explicit breakpoint, no automatic HTTP/SDK retry. No eve route was opened. Its tools, sandbox, model gate and content instrumentation remain closed.
 
-The provider receives bounded current activity context and the ordered Learner/Tutor exchange, not profile names, family IDs, scratchpad contents or past transcripts. A 64,000-byte request ceiling bounds the app payload; it is explicitly **not** a token estimate. Requests above it preserve input and require a new activity. Input-token preflight is not used because its retention/pricing approval has not been established.
+The provider receives bounded current activity context (including the chosen purpose and explicit declined connections) and the ordered Learner/Tutor exchange, not profile names, family IDs, scratchpad contents or past transcripts. A 64,000-byte request ceiling bounds the app payload; it is explicitly **not** a token estimate. Requests above it preserve input and require a new activity. Input-token preflight is not used because its retention/pricing approval has not been established.
 
 ## Reservation and reconciliation
 
@@ -38,6 +38,15 @@ Text is the only currently permitted metered operation kind. Image understanding
 
 Browser scenarios use real Next.js routes, Better Auth cookies, isolated PostgreSQL and controlled external HTTP responses. They cover readiness privacy/read-only behavior, exact direct request policy, measured/hidden usage, completed replay across restart, pending replay, concurrent allowance exhaustion, disconnected-outcome holds and explicit retry, funding/retention gates, account rejection, partial output, and unverifiable usage. The first readiness, direct-response, retry explanation, evidence-gate and exhausted-provider reason assertions each failed before their corresponding implementation.
 
-Final command results and visual checks are recorded with the ticket handoff. This work does not establish remote hosting, actual subscription credit eligibility or activation, account/ZDR approval, deployed cleanup/backup retention, real model response schema or teaching quality. No live provider request, credential, credit purchase, limit change, or cloud resource was used. Those final-pilot gates remain closed.
+Validation performed with Node 26.13.1:
+
+- `npm run test:browser -- tests/model-access.spec.ts`: 8 scenarios passed before the activity integration.
+- After merging ticket 04, `npm run test:browser -- tests/model-access.spec.ts -g 'chosen activity purpose|direct Sol reply'`: 2 passed. The new purpose assertion first failed against the old direct adapter, then passed with the activity context and declined-connection instruction.
+- `npm run test:browser -- tests/text-coaching.spec.ts -g 'a Learner starts|a failed reply|unconfigured Tutor'`: 3 affected scripted-preview scenarios passed after integration.
+- `npm run typecheck`: passed before and after integration.
+- `npm run build`: Next.js and eve passed. The changed web context was rebuilt after integration with `npm run build:web`; it passed. No eve behavior changed in the merge.
+- Readiness panel inspected at 1366×768: labels, dollar values and conservative hold explanation fit the laptop viewport; the panel is scrollable if evidence dates add height. React guidance reviewed for component separation, abort cleanup, read-only controls and browser-safe type imports.
+
+ This work does not establish remote hosting, actual subscription credit eligibility or activation, account/ZDR approval, deployed cleanup/backup retention, real model response schema or teaching quality. No live provider request, credential, credit purchase, limit change, or cloud resource was used. Those final-pilot gates remain closed.
 
 Primary documentation checked 2026-11-16: [Sol model bounds](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [pricing](https://developers.openai.com/api/docs/pricing), [Responses request options](https://developers.openai.com/api/reference/resources/responses/methods/create), [prompt caching and usage categories](https://developers.openai.com/api/docs/guides/prompt-caching), [subscription-credit funding](https://developers.openai.com/api/docs/guides/chatgpt-api-credits), and [provider retention](https://developers.openai.com/api/docs/guides/your-data).

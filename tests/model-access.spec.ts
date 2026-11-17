@@ -56,6 +56,50 @@ test.describe("metered direct Sol", () => {
     controlledTutorEnabled: false,
     modelEnvironment: fixtureEnvironment,
   });
+  test("chosen activity purpose and declined maths stay in the direct metered context", async ({
+    page,
+    openai,
+  }) => {
+    await setup(page);
+    await learner(page);
+    await page
+      .getByRole("button", { name: "End activity", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Biking exploration", exact: true })
+      .click();
+    openai.reply("What changes when the trail gets rocky?");
+    await page
+      .getByLabel("Your question")
+      .fill("Why does riding over rocks feel different?");
+    await page.getByRole("button", { name: "Ask Tutor", exact: true }).click();
+    await expect(
+      page.getByRole("region", { name: "Conversation" }),
+    ).toContainText("trail gets rocky");
+    expect(JSON.stringify(openai.requests[0].body.input)).toContain(
+      "Explore what makes a bike ride feel different",
+    );
+    expect(openai.requests[0].body.instructions).not.toContain(
+      "Why does riding over rocks",
+    );
+    openai.reply("We can stay with how biking feels.");
+    await page
+      .getByRole("button", { name: "Keep this about biking", exact: true })
+      .click();
+    await expect(
+      page.getByRole("region", { name: "Conversation" }),
+    ).toContainText("stay with how biking feels");
+    expect(JSON.stringify(openai.requests[1].body.input)).toContain(
+      "I do not want a maths connection",
+    );
+    expect(openai.requests[1].body.instructions).toContain(
+      "Respect a declined connection",
+    );
+    expect(
+      (await (await page.request.get("/api/model-access")).json())
+        .settledNanoUsd,
+    ).toBe("46000000");
+  });
   test("a direct Sol reply settles measured usage including hidden reasoning and replays safely", async ({
     page,
     app,
@@ -109,6 +153,9 @@ test.describe("metered direct Sol", () => {
     expect(openai.requests).toHaveLength(1);
     await page.reload();
     await page.setViewportSize({ width: 1366, height: 768 });
+    await expect(
+      page.getByRole("region", { name: "Conversation" }),
+    ).toContainText("Try drawing six cups.");
     await page.getByRole("button", { name: "Model access" }).click();
     await expect(
       page.getByRole("region", { name: "Model access" }),
