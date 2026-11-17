@@ -31,7 +31,9 @@ function evidence(value: string | undefined): Record<string, unknown> {
     return {};
   }
 }
-export function providerConfiguration(): ProviderConfiguration {
+export function providerConfiguration(
+  kind: "text" | "image" = "text",
+): ProviderConfiguration {
   const base: ProviderConfiguration = {
     mode:
       process.env.TUTOR_PREVIEW_URL && process.env.NODE_ENV !== "production"
@@ -164,6 +166,7 @@ export function providerConfiguration(): ProviderConfiguration {
     retention.projectId !== funding.projectId ||
     retention.approvedZdr !== true ||
     retention.responsesTextApproved !== true ||
+    (kind === "image" && retention.responsesImagesApproved !== true) ||
     retention.applicationRetentionVerified !== true ||
     !id(retention.evidenceReference) ||
     typeof retention.expiresAt !== "string" ||
@@ -172,8 +175,7 @@ export function providerConfiguration(): ProviderConfiguration {
     return {
       ...verified,
       reason: "unverified_retention",
-      message:
-        "Live family retention approval is unverified for this project and text endpoint. store:false alone is not approval.",
+      message: `Live family retention approval is unverified for this project and ${kind === "image" ? "Responses image feature" : "text endpoint"}. store:false alone is not approval.`,
     };
   }
   const retentionExpiresAt = new Date(
@@ -232,8 +234,10 @@ export async function allowanceTotals(windowId: string) {
     unknown: BigInt(totals.unknown),
   };
 }
-export async function modelAccess(): Promise<ModelAccess> {
-  const config = providerConfiguration();
+export async function modelAccess(
+  kind: "text" | "image" = "text",
+): Promise<ModelAccess> {
+  const config = providerConfiguration(kind);
   const totals = await allowanceTotals(config.windowId);
   const window = (
     await database.query("SELECT * FROM model_allowance WHERE id = $1", [
@@ -258,8 +262,7 @@ export async function modelAccess(): Promise<ModelAccess> {
       "The provider rejected account access or funding. Parent verification is needed before more requests.";
   } else if (reason === "available" && remaining < textReservationNanoUsd) {
     reason = "allowance_exhausted";
-    message =
-      "The remaining app allowance cannot cover another text request. Saved work is still available.";
+    message = `The remaining app allowance cannot cover another ${kind} request. Saved work is still available.`;
   }
   return {
     mode: config.mode,

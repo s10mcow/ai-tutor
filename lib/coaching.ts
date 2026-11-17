@@ -1,3 +1,4 @@
+import { sessionImages } from "./session-images.ts";
 import { randomUUID } from "node:crypto";
 import { database } from "./database.ts";
 import { AccessError, requireLearner, type FamilyAccess } from "./family.ts";
@@ -59,6 +60,7 @@ async function snapshot(row: SessionRow): Promise<LearningSession> {
     breakRevision: row.break_revision,
     expiresAt: row.expires_at.toISOString(),
     actions,
+    images: await sessionImages(row.id),
   };
 }
 export async function currentSession(access: FamilyAccess, learnerId: string) {
@@ -185,7 +187,7 @@ export async function submitAction(
   try {
     await client.query("BEGIN");
     const locked = await client.query(
-      "SELECT id, break_state FROM learning_session WHERE id = $1 AND family_id = $2 AND learner_id = $3 AND expires_at > now() FOR UPDATE",
+      "SELECT id, problem, break_state FROM learning_session WHERE id = $1 AND family_id = $2 AND learner_id = $3 AND expires_at > now() FOR UPDATE",
       [sessionId, access.familyId, learnerId],
     );
     if (!locked.rowCount)
@@ -194,6 +196,15 @@ export async function submitAction(
       throw new AccessError(
         409,
         "Your activity is paused. Resume when you are ready.",
+      );
+    const unconfirmed = await client.query(
+      "SELECT id FROM session_image WHERE session_id = $1 AND status <> 'confirmed'",
+      [sessionId],
+    );
+    if (unconfirmed.rowCount)
+      throw new AccessError(
+        409,
+        "Confirm or remove the picture before asking the Tutor.",
       );
     const actions = (
       await client.query<CoachingAction>(
@@ -247,7 +258,10 @@ export async function submitAction(
             attemptId,
           ],
         );
-        if (!actions.length || action.intent === "correction")
+        if (
+          (!actions.length && !locked.rows[0].problem) ||
+          action.intent === "correction"
+        )
           await client.query(
             "UPDATE learning_session SET problem = $2 WHERE id = $1",
             [sessionId, action.text],
@@ -274,6 +288,12 @@ export async function submitAction(
       problem: session.problem,
       activity: session.activity,
       actions: session.actions,
+      confirmedPictures: session.images
+        .filter((image) => image.status === "confirmed")
+        .map((image) => ({
+          kind: image.kind,
+          description: image.confirmedDescription!,
+        })),
       learningNotes: await readLearningNotes(access, learnerId),
     });
     await database.query(

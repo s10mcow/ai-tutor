@@ -1,3 +1,4 @@
+import type { SessionImage } from "./image-contract.ts";
 import type { ActivityChoice } from "./activity-contract.ts";
 import type { MathsGame } from "./maths-game-contract.ts";
 
@@ -34,6 +35,7 @@ export type LearningSession = {
   breakRevision: number;
   expiresAt: string;
   actions: CoachingAction[];
+  images: SessionImage[];
 };
 export type CoachingBreak = {
   paused: boolean;
