@@ -8,6 +8,7 @@ import type {
 } from "./coaching-contract.ts";
 import { coachingIntents, type CoachingIntent } from "./coaching-contract.ts";
 import { tutorReply } from "./tutor-provider.ts";
+import { readLearningNotes } from "./learning-notes.ts";
 import { parseActivity } from "./activities.ts";
 import type { ActivityChoice } from "./activity-contract.ts";
 import type { MathsGame } from "./maths-game-contract.ts";
@@ -71,7 +72,23 @@ export async function startSession(
   input: unknown = {},
 ) {
   await requireLearner(access, learnerId);
-  const activity = parseActivity(input);
+  let activity = parseActivity(input);
+  if (
+    input &&
+    typeof input === "object" &&
+    "resume" in input &&
+    input.resume === true
+  ) {
+    const notes = await readLearningNotes(access, learnerId);
+    if (!notes?.nextStep)
+      throw new AccessError(404, "No saved next step. Choose a new activity.");
+    activity = {
+      kind: "custom",
+      title: "Continue your next step",
+      purpose: notes.nextStep,
+      starter: notes.nextStep,
+    };
+  }
   await purgeExpiredSessions();
   const row = (
     await database.query<SessionRow>(
@@ -229,6 +246,7 @@ export async function submitAction(
       problem: session.problem,
       activity: session.activity,
       actions: session.actions,
+      learningNotes: await readLearningNotes(access, learnerId),
     });
     await database.query(
       "UPDATE learning_action SET reply = $3, status = 'complete' WHERE session_id = $1 AND id = $2 AND attempt_id = $4 AND status = 'pending'",

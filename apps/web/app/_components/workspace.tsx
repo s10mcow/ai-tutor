@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { Learner } from "../../../../lib/family";
+import { LearningNotesView } from "./learning-notes";
 import { Portfolio } from "./portfolio";
 import { CoachingSession } from "./coaching-session";
 
@@ -12,7 +13,9 @@ export function Workspace({
   onSwitch: () => void;
 }) {
   const [draft, setDraft] = useState("");
-  const [view, setView] = useState<"learning" | "portfolio">("learning");
+  const [view, setView] = useState<"learning" | "portfolio" | "notes">(
+    "learning",
+  );
   return (
     <div className="workspace">
       <aside className="workspace-nav">
@@ -37,6 +40,12 @@ export function Workspace({
           >
             My Portfolio
           </button>
+          <button
+            aria-pressed={view === "notes"}
+            onClick={() => setView("notes")}
+          >
+            Learning notes
+          </button>
         </nav>
         <div className="nav-note">
           <span aria-hidden="true">✦</span>
@@ -49,7 +58,9 @@ export function Workspace({
         <p className="intro">
           There’s room here for a question, a first try, and a change of mind.
         </p>
-        {view === "portfolio" ? (
+        {view === "notes" ? (
+          <LearningNotesView learnerId={learner.id} />
+        ) : view === "portfolio" ? (
           <Portfolio learner={learner} />
         ) : (
           <>
