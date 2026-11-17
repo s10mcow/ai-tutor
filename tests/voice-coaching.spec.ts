@@ -110,6 +110,7 @@ async function setup(page: Page) {
   }
   await page.getByRole("button", { name: "Open River’s workspace" }).click();
   await page.getByRole("button", { name: "Start an activity" }).click();
+  await expect(page.getByLabel("Your question")).toBeVisible();
 }
 async function record(page: Page) {
   await page
@@ -303,6 +304,8 @@ test("profile and activity changes discard pending audio and stop playback", asy
   await expect(
     page.getByRole("status").filter({ hasText: "Recording" }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop reading", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Read latest reply aloud" })).toBeDisabled();
   await page.getByRole("button", { name: "Switch Learner" }).click();
   expect(
     await page.evaluate(() => (window as any).speechFixture.cancelled),

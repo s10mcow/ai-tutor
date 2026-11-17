@@ -45,6 +45,7 @@ export function CoachingSession({
 }) {
   const [session, setSession] = useState<LearningSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [capturing, setCapturing] = useState(false);
   const [ending, setEnding] = useState(false);
   const activityVersion = useRef(0);
   const [busy, setBusy] = useState(false);
@@ -347,7 +348,7 @@ export function CoachingSession({
               text={
                 session.actions.findLast((entry) => entry.reply)?.reply ?? ""
               }
-              disabled={blocked}
+              disabled={blocked || capturing}
             />
             {(busy || waiting) && (
               <p role="status">The Tutor is thinking. Your input is saved…</p>
@@ -414,6 +415,7 @@ export function CoachingSession({
               url={`${url}/${session.id}`}
               disabled={blocked}
               onUse={setText}
+              onActive={setCapturing}
             />
             <form
               onSubmit={(event: FormEvent) => {

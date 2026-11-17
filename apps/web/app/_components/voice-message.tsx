@@ -5,10 +5,12 @@ export function VoiceMessage({
   url,
   disabled,
   onUse,
+  onActive,
 }: {
   url: string;
   disabled: boolean;
   onUse: (text: string) => void;
+  onActive: (active: boolean) => void;
 }) {
   const [state, setState] = useState<
     "idle" | "permission" | "recording" | "transcribing" | "review"
@@ -24,6 +26,7 @@ export function VoiceMessage({
     setState("idle");
     setTranscript("");
   }
+  useEffect(() => { onActive(state === "permission" || state === "recording"); return () => onActive(false); }, [state, onActive]);
   useEffect(() => {
     if (disabled) cancel();
   }, [disabled]);
