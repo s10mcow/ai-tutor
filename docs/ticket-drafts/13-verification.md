@@ -31,7 +31,17 @@ Live research requires the existing exclusive-ledger subscription funding eviden
 
 The agreed seam is the browser-facing application with real Better Auth and an isolated PostgreSQL cluster; only the external Responses endpoint is controlled. Vertical red-to-green evidence included missing lookup control; acceptance of injected tool settings; absent failed-lookup/retry messaging; rejected own-word revision save; acceptance of unexpected tool output, contradictory aggregate usage being settled, and the missing expanded source-inspection control. See `tests/public-sources.spec.ts` for reproducible scenarios.
 
-Final commands, screenshot review, and integration regression results are recorded below after verification.
+Node 26.13.1, own worktree dependencies (`npm ci --ignore-scripts`), actual auth and isolated PostgreSQL:
+
+- `npm run test:browser -- tests/public-sources.spec.ts` — **8 passed** after integrating tickets 09 and 11 (1.3 minutes). Covers support, conflicting sources, absent/uncited retrieval, unsafe links, unsupported operations and tool payloads, unexpected tool output, revision and explicit Portfolio save, restart/replay, failed lookup and held usage, exhaustion, research/text concurrency, feature retention gates, Learner ownership, anonymous/CSRF access, session expiry, missing usage, and contradictory aggregate totals.
+- Seven named regressions from `model-access`, `reasoning-coaching`, `learning-continuity`, `image-coaching`, `voice-coaching`, and `picture-portfolio` — **7 passed** (1.3 minutes). Selected direct Sol settlement/replay, coached reasoning/fresh challenge, pause/restart, Learner-specific notes, corrected picture coaching, reviewed speech/typed context, and explicit picture save through source cleanup. No full suite was run.
+- `npm run typecheck` — passed before commit and after the integration merge.
+- `npm run build` — production Next.js and eve builds passed. The first web build reported missing local deployment auth configuration; a follow-up `build:web` with fictional build-only `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` passed cleanly. No real credentials or provider calls were used.
+- `git diff --check` — clean.
+
+Visually inspected the expanded citation dialog and session at **1366×768**, including the merged voice controls. The full evidence explanation, source links, uncertainty note, and close control fit the dialog. The browser scenario exercises the expanded view and close interaction; the native dialog supplies keyboard and focus semantics. Images are available at `/tmp/ai-tutor-research/ticket13-source-inspection-laptop.png` and `/tmp/ai-tutor-research/ticket13-source-check-laptop.png` (generated artifacts, not committed).
+
+Implementation starts at `858839f`; voice/picture Portfolio integration is in `4673795`. Latest hosted-verification documentation through `9cb96d2` is included; it changes no source-check execution code. The React component review preserved normal escaped text rendering, typed props, native button/dialog semantics, and the existing cancellation and profile lifetimes.
 
 ## Remaining live gates
 
