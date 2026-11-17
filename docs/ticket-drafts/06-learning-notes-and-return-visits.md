@@ -8,13 +8,13 @@
 
 **Source stories:** 10, 53, 54, 55.
 
-- [ ] A completed or paused learning exchange can retain brief notes about an expressed interest, an approach that helped, and a possible next step.
-- [ ] A new visit can present the next step and use the correct Learner's notes in the new session.
-- [ ] The Learner can choose something new instead of accepting the previous next step.
-- [ ] Notes reflect observed or stated information and do not infer mastery, fixed ability, or preferences unsupported by the exchange.
-- [ ] Persistent memory remains brief learning notes rather than silently archiving every conversation or raw recording.
-- [ ] Server-side ownership checks protect note retrieval and updates; profile switching cannot send the prior Learner's notes into a new session.
-- [ ] Browser scenarios create notes through a session, open a fresh visit, resume or decline the next step, and verify sibling isolation against the real test datastore.
+- [x] A completed or paused learning exchange can retain brief notes about an expressed interest, an approach that helped, and a possible next step.
+- [x] A new visit can present the next step and use the correct Learner's notes in the new session.
+- [x] The Learner can choose something new instead of accepting the previous next step.
+- [x] Notes reflect observed or stated information and do not infer mastery, fixed ability, or preferences unsupported by the exchange.
+- [x] Persistent memory remains brief learning notes rather than silently archiving every conversation or raw recording.
+- [x] Server-side ownership checks protect note retrieval and updates; profile switching cannot send the prior Learner's notes into a new session.
+- [x] Browser scenarios create notes through a session, open a fresh visit, resume or decline the next step, and verify sibling isolation against the real test datastore.
 
 **Demo:** Finish a fictional learning exchange, return later to its proposed next step, then switch profiles and show that the notes do not transfer.
 
