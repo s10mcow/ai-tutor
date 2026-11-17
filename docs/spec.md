@@ -1,6 +1,6 @@
 # AI tutor for independent learning and critical thinking
 
-Status: Draft specification; tracker publication and test-boundary confirmation pending.
+Status: Accepted for implementation; published as [GitHub issue #1](https://github.com/s10mcow/ai-tutor/issues/1).
 
 Intended triage role on publication: `ready-for-agent`.
 
@@ -102,7 +102,7 @@ Use the parent's preferred GPT-6.1 Sol model with separate speech capabilities. 
 9. Persist Portfolios and brief learning notes separately per Learner. Long-term full-conversation archiving is not an agreed feature. Maintain the session context needed for interaction without silently expanding the long-term memory policy.
 10. Constrain external tools to finding and reading public information. Enforce the capability boundary in the available tools and application controls, rather than relying only on instructions to the model. Source content and uploaded text are learning material, not authority to change the Tutor's operating rules.
 11. Target `gpt-6.1-sol` for tutoring and image understanding, with separate speech capabilities. Preserve the model preference; a substitute model requires a visible decision rather than a silent fallback.
-12. Use the existing Pro plan's API-credit benefit only after eligibility, activation, and balance are established. The $200 subscription price is not authorization for additional charges. Hosting and storage are separate dependencies whose availability and cost remain to be verified.
+12. Use the existing Pro plan's API-credit benefit only after eligibility, activation, and balance are established. The authorized model budget is limited to activated included credits. The parent subsequently authorized the existing Neon Launch and Vercel Pro accounts, including normal hosting/storage usage charges; those services have been provisioned and verified separately.
 13. Establish provider-side under-13 data handling before live use with the children's personal data. Saving less data in the application or disabling response storage alone does not establish the provider's Zero Data Retention configuration.
 
 ### Proposed application responsibilities
@@ -124,7 +124,7 @@ There is no existing application code or module structure. The following respons
 
 Use one primary behavioral boundary: the public application as exercised from the browser, through its backend, authorization, and test persistence. This is the highest practical seam for the requested experience. Replace external AI, speech, and research services with controlled adapters for repeatable automated scenarios; do not mock internal application modules merely to test their wiring.
 
-The user has not yet confirmed this proposed seam. Confirmation is requested with this draft, as required by the spec workflow.
+The user's implementation request adopts this reviewed application boundary. Use it for the ticket implementations.
 
 ### What makes a good test
 
@@ -169,14 +169,14 @@ The primary boundary covers the Tutor application, its authorization and persist
 - Public Portfolio publishing, social features, or sharing with people beyond the agreed family use.
 - Tutor-controlled accounts, purchases, messages, or general-purpose computer control.
 - Indefinite raw-audio collection or full-conversation archiving as a default memory feature.
-- Additional paid usage, paid infrastructure purchases, or claiming that the Pro subscription provides unlimited hosted app access.
+- Additional paid model usage, unapproved infrastructure purchases, or claiming that the Pro subscription provides unlimited hosted app access.
 - Live processing of the children's personal data before the required provider access and retention conditions have been established.
 
 ## Further Notes
 
 - The user invoked `to-spec` after reviewing the design brief. This document synthesizes the agreed product direction and the two Learners' separate preferences; it does not reopen the product interview.
-- The specification is written locally but has not been published to an issue tracker. There is no Git repository, remote, issue-tracker configuration, or triage-label mapping in the workspace. The earlier setup conversation did not reach a tracker choice. Complete `setup-matt-pocock-skills`, then publish this specification using the configured `ready-for-agent` role without additional triage.
-- The testing boundary is proposed and needs the workflow's explicit confirmation. That confirmation does not require selecting a test runner or implementation stack.
+- The specification and 14 implementation tickets are published in the user-selected GitHub repository. See [tracker index](tracker-index.json) for issue links and native blocker relationships.
+- The implementation request adopts the browser-facing test boundary described above. Framework and implementation choices are made within each slice.
 - The proposed session flow and application responsibilities are implementation guidance derived from the agreed behavior. The first usability trial should validate the Learners' experience of uploading paper work, speaking to the Tutor, and interacting with a short game.
 - Model, subscription, and data-retention findings were checked against official documentation on 2026-11-16. Recheck eligibility and account state during setup rather than assuming that the documented benefit has already been claimed.
 - OpenAI documents the preferred model's text and image input and text output, eligible Pro API-credit benefits, and under-13 data-handling requirements. Relevant sources are [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [subscription API credits](https://developers.openai.com/api/docs/guides/chatgpt-api-credits), [under-18 API guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance), and [data-retention controls](https://developers.openai.com/api/docs/guides/your-data#data-retention-controls-for-abuse-monitoring).

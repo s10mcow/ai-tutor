@@ -1,10 +1,10 @@
 # AI tutor ticket breakdown
 
-Status: Draft for review. Tickets have not been published to an issue tracker or marked `ready-for-agent`.
+Status: Accepted for implementation and published to GitHub with `ready-for-agent` labels and native dependencies. See [tracker index](tracker-index.json).
 
 Source: [AI tutor specification](spec.md), the [Glossary](../GLOSSARY.md), and the two existing ADRs. There is no application code to prefactor and no existing test suite to reuse.
 
-## Proposed slices
+## Implementation slices
 
 Each linked draft contains its end-to-end behavior, direct blockers, acceptance criteria, source-story coverage, and a demo. A ticket's schema, application behavior, interface, and verification are delivered together.
 
@@ -34,14 +34,12 @@ Each linked draft contains its end-to-end behavior, direct blockers, acceptance 
 - The final pilot lists only terminal prerequisites. All other tickets are reached transitively; it does not add redundant blockers.
 - No external API approval is required to implement and verify earlier slices with controlled providers and fictional Learners. Live-family activation stays gated in 14.
 
-## Verification approach proposed for approval
+## Verification approach
 
 Use the browser-facing application as the primary behavioral test boundary, including real application authorization and isolated test persistence. Replace external model, speech, and research services with controlled responses for deterministic scenarios. Each slice adds only the narrow scenarios needed for its behavior; avoid tests coupled to implementation details and avoid broad test-suite runs without a concrete reason.
 
 A separate small real-model evaluation uses fictional cases through the same application boundary when authorized access is available. It checks educational behavior that a scripted provider cannot establish. The final pilot verifies account readiness and actual hosted integration before child data is used.
 
-## Review and publication
+## Publication and implementation
 
-Review whether the slices fit a fresh implementation context, whether every direct blocker is necessary, and whether any slices should be merged or split. The test boundary from the spec is still proposed; approving this breakdown can also confirm it.
-
-The workspace has no configured issue tracker or triage vocabulary. Run `setup-matt-pocock-skills` to establish them. After the user approves the breakdown and setup is complete, publish one ticket per file or issue in dependency order, apply the configured `ready-for-agent` role, and preserve the source specification without closing or modifying it. These draft locations do not establish a local tracker by implication.
+The user invoked implement-spec, selected GitHub, and supplied the repository URL. All tickets are published under the [source specification](https://github.com/s10mcow/ai-tutor/issues/1). Work proceeds on `integration/ai-tutor` with separate implementer branches, targeted browser scenarios, and a merger agent. External activation criteria remain open until verified; completed local implementation is not evidence of hosted or live-family readiness.

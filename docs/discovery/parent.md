@@ -29,4 +29,5 @@
 - The parent prefers GPT-6.1 Sol and intends to use the existing ChatGPT subscription.
 - The parent confirmed a $200/month ChatGPT Pro subscription. This is the existing subscription cost, not authorization for an additional $200/month of charges.
 - The funding target is the subscription's included API benefit, subject to eligibility and activation. No additional paid API allowance has been specified.
+- During implementation, the parent authorized: “Use my existing Neon Launch and Vercel Pro accounts; allow normal usage charges.” This covers hosting and storage; the model-funding constraint remains unchanged.
 - The integration route remains unresolved. See [current model-access findings](model-access.md).

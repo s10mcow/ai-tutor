@@ -1,0 +1,34 @@
+import { portfolioSaveBody } from "../../../../../../../lib/portfolio-upload";
+import {
+  familyResponse,
+  requireFamily,
+  requireSameOrigin,
+} from "../../../../../../../lib/family";
+import {
+  listPortfolio,
+  savePortfolioEntry,
+} from "../../../../../../../lib/portfolio";
+type Context = { params: Promise<{ learnerId: string }> };
+export async function GET(request: Request, { params }: Context) {
+  return familyResponse(async () => ({
+    entries: await listPortfolio(
+      await requireFamily(request),
+      (await params).learnerId,
+    ),
+  }));
+}
+export async function POST(request: Request, { params }: Context) {
+  return familyResponse(async () => {
+    requireSameOrigin(request);
+    const access = await requireFamily(request);
+    const body = await portfolioSaveBody(request);
+    return {
+      entry: await savePortfolioEntry(
+        access,
+        (await params).learnerId,
+        body.input,
+        body.audio,
+      ),
+    };
+  });
+}

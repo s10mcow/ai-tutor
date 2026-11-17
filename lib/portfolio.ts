@@ -1,0 +1,316 @@
+import { validateRecording } from "./audio-recording.ts";
+import { createHash } from "node:crypto";
+import { database } from "./database.ts";
+import { AccessError, requireLearner, type FamilyAccess } from "./family.ts";
+import {
+  canSaveWrittenAction,
+  canSavePortfolioReflection,
+  type PortfolioEntry,
+  type PortfolioImage,
+  type PortfolioSummary,
+  type WrittenEvidence,
+  type PortfolioEntryInput,
+} from "./portfolio-contract.ts";
+import type { CoachingAction } from "./coaching-contract.ts";
+
+type EntryRow = {
+  id: string;
+  family_id: string;
+  learner_id: string;
+  save_fingerprint: string;
+  title: string;
+  evidence: WrittenEvidence[];
+  images: PortfolioImage[];
+  audio: PortfolioEntry["audio"];
+  reflection: string;
+  created_at: Date;
+};
+function entry(row: EntryRow): PortfolioEntry {
+  return {
+    id: row.id,
+    learnerId: row.learner_id,
+    title: row.title,
+    evidence: row.evidence,
+    images: row.images,
+    audio: row.audio,
+    reflection: row.reflection,
+    createdAt: row.created_at.toISOString(),
+  };
+}
+function parseInput(value: unknown, hasAudio: boolean): PortfolioEntryInput {
+  const input = value as Partial<PortfolioEntryInput> | null;
+  const validId = (id: unknown): id is string =>
+    typeof id === "string" && /^[a-zA-Z0-9-]{1,80}$/.test(id);
+  if (
+    !input ||
+    !validId(input.id) ||
+    !validId(input.sessionId) ||
+    !Array.isArray(input.actionIds) ||
+    input.actionIds.length > 40 ||
+    !input.actionIds.every(validId) ||
+    new Set(input.actionIds).size !== input.actionIds.length ||
+    (input.imageIds !== undefined &&
+      (!Array.isArray(input.imageIds) ||
+        input.imageIds.length > 1 ||
+        !input.imageIds.every(validId))) ||
+    (!input.actionIds.length && !input.imageIds?.length && !hasAudio) ||
+    typeof input.title !== "string" ||
+    !input.title.trim() ||
+    input.title.trim().length > 100 ||
+    typeof input.reflection !== "string" ||
+    input.reflection.length > 4000 ||
+    (!input.actionIds.length && !input.reflection.trim() && !hasAudio)
+  ) {
+    throw new AccessError(
+      400,
+      "Choose your work, add a title up to 100 characters, and keep your reflection under 4,000 characters.",
+    );
+  }
+  return {
+    id: input.id,
+    sessionId: input.sessionId,
+    actionIds: input.actionIds,
+    title: input.title.trim(),
+    reflection: input.reflection,
+    ...(input.imageIds?.length ? { imageIds: input.imageIds } : {}),
+  };
+}
+export async function listPortfolio(
+  access: FamilyAccess,
+  learnerId: string,
+): Promise<PortfolioSummary[]> {
+  await requireLearner(access, learnerId);
+  const result = await database.query<{
+    id: string;
+    title: string;
+    created_at: Date;
+  }>(
+    "SELECT id, title, created_at FROM portfolio_entry WHERE family_id = $1 AND learner_id = $2 ORDER BY created_at DESC, id",
+    [access.familyId, learnerId],
+  );
+  return result.rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    createdAt: row.created_at.toISOString(),
+  }));
+}
+export async function readPortfolioEntry(
+  access: FamilyAccess,
+  learnerId: string,
+  entryId: string,
+): Promise<PortfolioEntry> {
+  await requireLearner(access, learnerId);
+  const row = (
+    await database.query<EntryRow>(
+      "SELECT * FROM portfolio_entry WHERE id = $1 AND family_id = $2 AND learner_id = $3",
+      [entryId, access.familyId, learnerId],
+    )
+  ).rows[0];
+  if (!row) throw new AccessError(404, "That Portfolio entry is unavailable.");
+  return entry(row);
+}
+export async function savePortfolioEntry(
+  access: FamilyAccess,
+  learnerId: string,
+  value: unknown,
+  audioBytes?: Buffer,
+): Promise<PortfolioEntry> {
+  await requireLearner(access, learnerId);
+  const audio = audioBytes
+    ? { durationSeconds: validateRecording(audioBytes) }
+    : null;
+  const input = parseInput(value, !!audio);
+  const fingerprint = createHash("sha256")
+    .update(
+      JSON.stringify({
+        ...input,
+        actionIds: [...input.actionIds].sort(),
+        ...(audioBytes
+          ? {
+              audioDigest: createHash("sha256")
+                .update(audioBytes)
+                .digest("hex"),
+            }
+          : {}),
+      }),
+    )
+    .digest("hex");
+  const client = await database.connect();
+  try {
+    await client.query("BEGIN");
+    // Serialize this save identity, including concurrent replays before commit.
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtextextended($1, 10))",
+      [input.id],
+    );
+    const existing = (
+      await client.query<EntryRow>(
+        "SELECT * FROM portfolio_entry WHERE id = $1",
+        [input.id],
+      )
+    ).rows[0];
+    if (existing) {
+      if (
+        existing.family_id !== access.familyId ||
+        existing.learner_id !== learnerId
+      )
+        throw new AccessError(404, "That Portfolio entry is unavailable.");
+      if (existing.save_fingerprint !== fingerprint)
+        throw new AccessError(
+          409,
+          "This save was already used for different work. Open your Portfolio to review it.",
+        );
+      await client.query("COMMIT");
+      return entry(existing);
+    }
+    const session = await client.query(
+      "SELECT id FROM learning_session WHERE id = $1 AND family_id = $2 AND learner_id = $3 AND expires_at > clock_timestamp() FOR SHARE",
+      [input.sessionId, access.familyId, learnerId],
+    );
+    if (!session.rowCount)
+      throw new AccessError(
+        404,
+        "That activity is no longer available to save.",
+      );
+    const selected = (
+      await client.query<CoachingAction>(
+        "SELECT id, text, intent FROM learning_action WHERE session_id = $1 AND id = ANY($2::text[]) ORDER BY sequence",
+        [input.sessionId, input.actionIds],
+      )
+    ).rows;
+    if (
+      selected.length !== input.actionIds.length ||
+      selected.some((action) => !canSaveWrittenAction(action))
+    )
+      throw new AccessError(400, "Choose written work from this activity.");
+    const evidence: WrittenEvidence[] = selected.map((action) => ({
+      actionId: action.id,
+      text: action.text,
+      intent: action.intent,
+    }));
+    // Lock the selected normalized source until its independent copy commits.
+    // Deleting a source picture or its activity must wait for this transaction.
+    const pictures = input.imageIds?.length
+      ? (
+          await client.query<PortfolioImage & { bytes: Buffer }>(
+            "SELECT id, kind, width, height, bytes FROM session_image WHERE session_id = $1 AND id = ANY($2::text[]) FOR SHARE",
+            [input.sessionId, input.imageIds],
+          )
+        ).rows
+      : [];
+    if (pictures.length !== (input.imageIds?.length ?? 0))
+      throw new AccessError(
+        404,
+        "That picture is no longer available to save.",
+      );
+    const images = pictures.map(({ id, kind, width, height }) => ({
+      id,
+      kind,
+      width,
+      height,
+    }));
+    const row = (
+      await client.query<EntryRow>(
+        "INSERT INTO portfolio_entry (id, family_id, learner_id, title, evidence, reflection, save_fingerprint, images, audio) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
+        [
+          input.id,
+          access.familyId,
+          learnerId,
+          input.title,
+          JSON.stringify(evidence),
+          input.reflection,
+          fingerprint,
+          JSON.stringify(images),
+          audio ? JSON.stringify(audio) : null,
+        ],
+      )
+    ).rows[0];
+    if (audioBytes)
+      await client.query(
+        "INSERT INTO portfolio_audio(entry_id, bytes) VALUES ($1, $2)",
+        [input.id, audioBytes],
+      );
+    for (const picture of pictures)
+      await client.query(
+        "INSERT INTO portfolio_image(entry_id, id, bytes) VALUES ($1, $2, $3)",
+        [input.id, picture.id, picture.bytes],
+      );
+    await client.query("COMMIT");
+    return entry(row);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function editReflection(
+  access: FamilyAccess,
+  learnerId: string,
+  entryId: string,
+  value: unknown,
+): Promise<PortfolioEntry> {
+  await requireLearner(access, learnerId);
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !("reflection" in value) ||
+    typeof value.reflection !== "string" ||
+    value.reflection.length > 4000
+  ) {
+    throw new AccessError(400, "Keep your reflection under 4,000 characters.");
+  }
+  if (!value.reflection.trim()) {
+    const existing = await readPortfolioEntry(access, learnerId, entryId);
+    if (!canSavePortfolioReflection(existing, value.reflection))
+      throw new AccessError(
+        400,
+        "Keep your own explanation or reflection alongside your picture.",
+      );
+  }
+  const row = (
+    await database.query<EntryRow>(
+      "UPDATE portfolio_entry SET reflection = $4, updated_at = now() WHERE id = $1 AND family_id = $2 AND learner_id = $3 RETURNING *",
+      [entryId, access.familyId, learnerId, value.reflection],
+    )
+  ).rows[0];
+  if (!row) throw new AccessError(404, "That Portfolio entry is unavailable.");
+  return entry(row);
+}
+
+// The owning entry is the authority; a source image ID alone grants no access.
+export async function readPortfolioImage(
+  access: FamilyAccess,
+  learnerId: string,
+  entryId: string,
+  imageId: string,
+): Promise<Buffer> {
+  await requireLearner(access, learnerId);
+  const row = (
+    await database.query<{ bytes: Buffer }>(
+      "SELECT image.bytes FROM portfolio_image image JOIN portfolio_entry entry ON entry.id = image.entry_id WHERE entry.id = $1 AND entry.family_id = $2 AND entry.learner_id = $3 AND image.id = $4",
+      [entryId, access.familyId, learnerId, imageId],
+    )
+  ).rows[0];
+  if (!row)
+    throw new AccessError(404, "That Portfolio picture is unavailable.");
+  return row.bytes;
+}
+
+export async function readPortfolioAudio(
+  access: FamilyAccess,
+  learnerId: string,
+  entryId: string,
+): Promise<Buffer> {
+  await requireLearner(access, learnerId);
+  const row = (
+    await database.query<{ bytes: Buffer }>(
+      "SELECT audio.bytes FROM portfolio_audio audio JOIN portfolio_entry entry ON entry.id = audio.entry_id WHERE entry.id = $1 AND entry.family_id = $2 AND entry.learner_id = $3",
+      [entryId, access.familyId, learnerId],
+    )
+  ).rows[0];
+  if (!row)
+    throw new AccessError(404, "That spoken reflection is unavailable.");
+  return row.bytes;
+}

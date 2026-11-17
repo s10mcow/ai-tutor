@@ -13,3 +13,6 @@ playwright-report/
 coverage/
 *.tsbuildinfo
 .DS_Store
+
+.output/
+apps/web/next-env.d.ts
