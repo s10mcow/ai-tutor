@@ -11,7 +11,7 @@ import { portfolioRequest } from "./portfolio-request";
 export function SaveEvidence({ session }: { session: LearningSession }) {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
-  if (!session.actions.some(canSaveWrittenAction))
+  if (!session.actions.some(canSaveWrittenAction) && !session.images.length)
     return session.actions.length ? (
       <small>
         Use “Share attempt” for your own explanation, discovery, or first try.
@@ -58,6 +58,7 @@ function EvidenceEditor({
   const dialog = useRef<HTMLDialogElement>(null);
   const lifetime = useRef<AbortController | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [selectedPictures, setSelectedPictures] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [reflection, setReflection] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,6 +78,7 @@ function EvidenceEditor({
       id: crypto.randomUUID(),
       sessionId: session.id,
       actionIds: selected,
+      ...(selectedPictures.length ? { imageIds: selectedPictures } : {}),
       title,
       reflection,
     };
@@ -120,25 +122,55 @@ function EvidenceEditor({
           Keep an attempt, explanation, or discovery. Only the work you select
           and your reflection will be saved.
         </p>
-        <fieldset disabled={busy || !!pending} className="evidence-choices">
-          <legend>My written work</legend>
-          {session.actions.filter(canSaveWrittenAction).map((action) => (
-            <label key={action.id}>
-              <input
-                type="checkbox"
-                checked={selected.includes(action.id)}
-                onChange={(event) =>
-                  setSelected((current) =>
-                    event.target.checked
-                      ? [...current, action.id]
-                      : current.filter((id) => id !== action.id),
-                  )
-                }
-              />
-              <span>{action.text}</span>
-            </label>
-          ))}
-        </fieldset>
+        {session.images.length > 0 && (
+          <fieldset disabled={busy || !!pending} className="evidence-choices">
+            <legend>My picture</legend>
+            {session.images.map((picture) => (
+              <label key={picture.id}>
+                <input
+                  type="checkbox"
+                  checked={selectedPictures.includes(picture.id)}
+                  onChange={(event) =>
+                    setSelectedPictures(
+                      event.target.checked ? [picture.id] : [],
+                    )
+                  }
+                />
+                <span>Keep this {picture.kind} picture</span>
+                <img
+                  className="evidence-picture-preview"
+                  src={`/api/learners/${session.learnerId}/session/${session.id}/images/${picture.id}`}
+                  alt=""
+                />
+              </label>
+            ))}
+            <p>
+              Add your own reflection or select your written explanation to go
+              with your picture.
+            </p>
+          </fieldset>
+        )}
+        {session.actions.some(canSaveWrittenAction) && (
+          <fieldset disabled={busy || !!pending} className="evidence-choices">
+            <legend>My written work</legend>
+            {session.actions.filter(canSaveWrittenAction).map((action) => (
+              <label key={action.id}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(action.id)}
+                  onChange={(event) =>
+                    setSelected((current) =>
+                      event.target.checked
+                        ? [...current, action.id]
+                        : current.filter((id) => id !== action.id),
+                    )
+                  }
+                />
+                <span>{action.text}</span>
+              </label>
+            ))}
+          </fieldset>
+        )}
         <label htmlFor="evidence-entry-title">Entry title</label>
         <input
           id="evidence-entry-title"
@@ -169,7 +201,12 @@ function EvidenceEditor({
         )}
         <button
           className="primary"
-          disabled={busy || !selected.length || !title.trim()}
+          disabled={
+            busy ||
+            (!selected.length &&
+              (!selectedPictures.length || !reflection.trim())) ||
+            !title.trim()
+          }
         >
           {busy ? "Saving…" : pending ? "Retry save" : "Save to Portfolio"}
         </button>

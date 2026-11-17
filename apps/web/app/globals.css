@@ -1306,3 +1306,22 @@ select:focus-visible {
 .session-picture[data-confirmed="false"] .attached-picture {
   max-height: 110px;
 }
+
+.evidence-picture-preview {
+  width: 125px;
+  max-height: 80px;
+  object-fit: contain;
+  margin-left: auto;
+}
+.portfolio-picture {
+  margin: 16px 0;
+}
+.portfolio-picture img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+}
