@@ -5,7 +5,9 @@ export async function GET(request: Request) {
     await requireFamily(request);
     const kind = new URL(request.url).searchParams.get("operation");
     return modelAccess(
-      kind === "transcription" || kind === "image" ? kind : "text",
+      kind === "research" || kind === "transcription" || kind === "image"
+        ? kind
+        : "text",
     );
   });
 }
