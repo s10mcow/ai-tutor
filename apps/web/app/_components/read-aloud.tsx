@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 export function ReadAloud({
   text,
   disabled,
@@ -7,6 +7,7 @@ export function ReadAloud({
   text: string;
   disabled: boolean;
 }) {
+  const generation = useRef(0);
   const [available, setAvailable] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState("");
@@ -20,17 +21,29 @@ export function ReadAloud({
           (voice) => voice.localService === true && voice.lang.startsWith("en"),
         );
       setAvailable(ready);
+      generation.current++;
       speech.cancel();
       setPlaying(false);
     }
     changed();
     speech.addEventListener("voiceschanged", changed);
+    const hidden = () => {
+      if (document.hidden) {
+        generation.current++;
+        speech.cancel();
+        setPlaying(false);
+      }
+    };
+    document.addEventListener("visibilitychange", hidden);
     return () => {
+      generation.current++;
+      document.removeEventListener("visibilitychange", hidden);
       speech.removeEventListener("voiceschanged", changed);
       speech.cancel();
     };
   }, []);
   useEffect(() => {
+    generation.current++;
     window.speechSynthesis?.cancel();
     setPlaying(false);
   }, [text, disabled]);
@@ -45,13 +58,17 @@ export function ReadAloud({
       setAvailable(false);
       return;
     }
+    const current = ++generation.current;
     speech.cancel();
     setError("");
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = voice;
     utterance.lang = voice.lang;
-    utterance.onend = () => setPlaying(false);
+    utterance.onend = () => {
+      if (current === generation.current) setPlaying(false);
+    };
     utterance.onerror = () => {
+      if (current !== generation.current) return;
       setPlaying(false);
       setError("Read-aloud could not play. Your reply is still here to read.");
     };
@@ -69,6 +86,7 @@ export function ReadAloud({
         <button
           type="button"
           onClick={() => {
+            generation.current++;
             window.speechSynthesis.cancel();
             setPlaying(false);
           }}

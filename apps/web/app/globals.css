@@ -1428,3 +1428,53 @@ select:focus-visible {
 .session-picture[data-confirmed="false"] .attached-picture {
   max-height: 110px;
 }
+
+.voice-tools {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: start;
+}
+.voice-tools .voice-message {
+  padding: 8px 0;
+}
+.voice-tools .read-aloud {
+  padding-top: 8px;
+}
+.voice-tools .voice-message small {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.voice-tools:has(#transcript) {
+  grid-template-columns: 1fr;
+}
+.voice-tools:has(#transcript) .read-aloud {
+  display: none;
+}
+.voice-tools button {
+  background: var(--white);
+  border: 1px solid #9cac8e;
+  border-radius: 8px;
+}
+@media (min-width: 951px) and (max-height: 850px) {
+  .workspace-main:has(.coaching-columns) > .eyebrow,
+  .workspace-main:has(.coaching-columns) > .intro {
+    display: none;
+  }
+  .coaching-panel .conversation {
+    max-height: 110px;
+  }
+}
+@media (max-width: 650px) {
+  .voice-tools {
+    grid-template-columns: 1fr;
+  }
+}
+.voice-tools .read-aloud {
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 250px;
+}
+.voice-tools .read-aloud small {
+  font-size: 11px;
+}

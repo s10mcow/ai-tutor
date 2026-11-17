@@ -6,11 +6,13 @@ export function VoiceMessage({
   disabled,
   onUse,
   onActive,
+  onReview,
 }: {
   url: string;
   disabled: boolean;
   onUse: (text: string) => void;
   onActive: (active: boolean) => void;
+  onReview: (review: boolean) => void;
 }) {
   const [state, setState] = useState<
     "idle" | "permission" | "recording" | "transcribing" | "review"
@@ -26,7 +28,14 @@ export function VoiceMessage({
     setState("idle");
     setTranscript("");
   }
-  useEffect(() => { onActive(state === "permission" || state === "recording"); return () => onActive(false); }, [state, onActive]);
+  useEffect(() => {
+    onReview(state === "review");
+    return () => onReview(false);
+  }, [state, onReview]);
+  useEffect(() => {
+    onActive(state === "permission" || state === "recording");
+    return () => onActive(false);
+  }, [state, onActive]);
   useEffect(() => {
     if (disabled) cancel();
   }, [disabled]);
@@ -160,10 +169,7 @@ export function VoiceMessage({
           {error}
         </p>
       )}
-      <small>
-        Microphone audio is temporary. Only text you choose to send enters this
-        activity.
-      </small>
+      <small>Audio is temporary. Check the words before sending.</small>
     </div>
   );
 }

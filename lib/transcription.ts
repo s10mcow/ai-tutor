@@ -63,8 +63,8 @@ export async function boundedRecording(request: Request) {
     reader.releaseLock();
   }
   const bytes = Buffer.concat(chunks);
-  validateRecording(bytes);
-  return bytes;
+  const durationSeconds = validateRecording(bytes);
+  return { bytes, durationSeconds };
 }
 export async function transcribeRecording(
   access: FamilyAccess,
@@ -75,10 +75,15 @@ export async function transcribeRecording(
   const session = await readSession(access, learnerId, sessionId);
   if (session.activity?.kind === "maths-game")
     throw new AccessError(400, "Use the game controls for this activity.");
+  if (session.breakState?.paused)
+    throw new AccessError(
+      409,
+      "Resume the activity before recording a message.",
+    );
   const id = request.headers.get("x-recording-id") ?? "";
   if (!/^[a-zA-Z0-9-]{1,80}$/.test(id))
     throw new AccessError(400, "Start a new recording.");
-  const bytes = await boundedRecording(request);
+  const { bytes, durationSeconds } = await boundedRecording(request);
   const attemptId = createHash("sha256")
     .update(
       JSON.stringify([
@@ -90,6 +95,16 @@ export async function transcribeRecording(
       ]),
     )
     .digest("hex");
+  const beforeDispatch = await readSession(access, learnerId, sessionId);
+  if (
+    request.signal.aborted ||
+    beforeDispatch.breakState?.paused ||
+    beforeDispatch.breakRevision !== session.breakRevision
+  )
+    throw new AccessError(
+      409,
+      "The activity changed. The recording was discarded.",
+    );
   let text: string | null;
   try {
     text = await meteredOperation<string | null>({
@@ -133,11 +148,15 @@ export async function transcribeRecording(
           typeof seconds === "number" &&
           Number.isFinite(seconds) &&
           seconds > 0 &&
-          seconds <= audioMaximumSeconds;
+          seconds <= audioMaximumSeconds &&
+          Math.abs(seconds - durationSeconds) <= 1;
+        const accountedSeconds = validUsage
+          ? Math.ceil(Math.max(seconds as number, durationSeconds))
+          : null;
         // Round up a fractional second rather than under-accounting. Missing or
         // incompatible usage retains the entire minute reservation for reconciliation.
         const measuredNanoUsd = validUsage
-          ? BigInt(Math.ceil(seconds as number)) * 75_000n
+          ? BigInt(accountedSeconds!) * 75_000n
           : null;
         return {
           value:
@@ -152,7 +171,8 @@ export async function transcribeRecording(
             ? {
                 type: "duration",
                 seconds,
-                accountedSeconds: Math.ceil(seconds as number),
+                accountedSeconds,
+                validatedSeconds: durationSeconds,
               }
             : undefined,
           requestId: response.headers.get("x-request-id") ?? undefined,
@@ -168,7 +188,16 @@ export async function transcribeRecording(
       "Transcription is unavailable or this recording was already submitted. You can type or make a new recording. An uncertain request keeps its allowance held; another recording may use more.",
     );
   }
-  await readSession(access, learnerId, sessionId);
+  const latest = await readSession(access, learnerId, sessionId);
+  if (
+    request.signal.aborted ||
+    latest.breakState?.paused ||
+    latest.breakRevision !== session.breakRevision
+  )
+    throw new AccessError(
+      409,
+      "The activity changed. The transcription was discarded.",
+    );
   if ((await selectedLearnerId(access)) !== learnerId)
     throw new AccessError(
       409,

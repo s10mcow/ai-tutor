@@ -1,7 +1,9 @@
+import { mkdir } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixture";
 
 test.use({
+  viewport: { width: 1366, height: 768 },
   controlledTutorEnabled: false,
   modelEnvironment: {
     TUTOR_OPENAI_FIXTURE_URL: "fixture",
@@ -112,14 +114,21 @@ async function setup(page: Page) {
   await page.getByRole("button", { name: "Start an activity" }).click();
   await expect(page.getByLabel("Your question")).toBeVisible();
 }
-async function record(page: Page) {
+async function record(page: Page, screenshot = false) {
   await page
     .getByRole("button", { name: "Record a message", exact: true })
     .click();
   await expect(
     page.getByRole("status").filter({ hasText: "Recording" }),
   ).toBeVisible();
-  // Allow actual Web Audio samples from Chromium's fictional microphone.
+  if (screenshot) {
+    await mkdir("/tmp/ai-tutor-research/ticket09", { recursive: true });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: "/tmp/ai-tutor-research/ticket09/recording-laptop.png",
+    });
+  }
+  // Allow actual Web Audio samples from the fictional microphone.
   await page.waitForTimeout(400);
   await page
     .getByRole("button", { name: "Stop and transcribe", exact: true })
@@ -128,11 +137,11 @@ async function record(page: Page) {
 test("reviewed speech and typed attempts share context and explicitly local read-aloud", async ({
   page,
   openai,
-}, testInfo) => {
+}) => {
   await setup(page);
   await page.getByLabel("My scratchpad").fill("Draw six cups");
   openai.transcribe("How can I share 24 pens among six cuts?");
-  await record(page);
+  await record(page, true);
   await expect(page.getByLabel("Review your transcription")).toHaveValue(
     "How can I share 24 pens among six cuts?",
   );
@@ -144,6 +153,14 @@ test("reviewed speech and typed attempts share context and explicitly local read
   await page
     .getByLabel("Review your transcription")
     .fill("How can I share 24 pencils among six cups?");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: "/tmp/ai-tutor-research/ticket09/transcription-review-laptop.png",
+  });
+  const reviewAction = await page
+    .getByRole("button", { name: "Use this text", exact: true })
+    .boundingBox();
+  expect(reviewAction!.y + reviewAction!.height).toBeLessThanOrEqual(768);
   await page
     .getByRole("button", { name: "Use this text", exact: true })
     .click();
@@ -176,13 +193,20 @@ test("reviewed speech and typed attempts share context and explicitly local read
     "six cuts",
   );
   await expect(page.getByLabel("My scratchpad")).toHaveValue("Draw six cups");
-  expect(
-    await (await page.request.get("/api/model-access")).json(),
-  ).toMatchObject({ settledNanoUsd: "46075000", unknownNanoUsd: "0" });
+  const usage = await (await page.request.get("/api/model-access")).json();
+  expect(usage.unknownNanoUsd).toBe("0");
+  expect(BigInt(usage.settledNanoUsd)).toBeGreaterThanOrEqual(46_075_000n);
+  expect(BigInt(usage.settledNanoUsd)).toBeLessThanOrEqual(50_500_000n);
   await page.setViewportSize({ width: 1366, height: 768 });
+  await mkdir("/tmp/ai-tutor-research/ticket09", { recursive: true });
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
-    path: testInfo.outputPath("spoken-coaching-laptop.png"),
+    path: "/tmp/ai-tutor-research/ticket09/spoken-coaching-laptop.png",
   });
+  const submit = await page
+    .getByRole("button", { name: "Share attempt", exact: true })
+    .boundingBox();
+  expect(submit!.y + submit!.height).toBeLessThanOrEqual(768);
 });
 
 test("leaving a hidden activity stops microphone capture without sending audio", async ({
@@ -304,8 +328,12 @@ test("profile and activity changes discard pending audio and stop playback", asy
   await expect(
     page.getByRole("status").filter({ hasText: "Recording" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Stop reading", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Read latest reply aloud" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Stop reading", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Read latest reply aloud" }),
+  ).toBeDisabled();
   await page.getByRole("button", { name: "Switch Learner" }).click();
   expect(
     await page.evaluate(() => (window as any).speechFixture.cancelled),
@@ -422,6 +450,9 @@ test("transcription validates bytes, ownership and replay before spending and sa
   expect(openai.requests).toHaveLength(1);
   release();
   expect(await (await pending).json()).toEqual({ text: "Unreviewed words" });
+  expect(
+    await (await page.request.get("/api/model-access")).json(),
+  ).toMatchObject({ settledNanoUsd: "75000", unknownNanoUsd: "0" });
   expect((await (await page.request.get(path)).json()).session.actions).toEqual(
     [],
   );
@@ -550,4 +581,135 @@ test("speech readiness is separate and a depleted shared allowance prevents disp
     ).status(),
   ).toBe(503);
   expect(openai.requests).toHaveLength(0);
+});
+
+test("pausing stops recording and rejects transcripts spanning pause and resume", async ({
+  page,
+  app,
+  openai,
+}) => {
+  await setup(page);
+  const { path } = await currentPath(page);
+  await page
+    .getByRole("button", { name: "Record a message", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Recording" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Take a break", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Resume activity", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      (window as any).speechFixture.streams.every((stream: MediaStream) =>
+        stream.getTracks().every((track) => track.readyState === "ended"),
+      ),
+    ),
+  ).toBe(true);
+  expect(
+    (
+      await page.request.post(`${path}/transcription`, {
+        headers: {
+          origin: app.url,
+          "Content-Type": "audio/wav",
+          "X-Recording-Id": "while-paused",
+        },
+        data: wav(),
+      })
+    ).status(),
+  ).toBe(409);
+  await page
+    .getByRole("button", { name: "Resume activity", exact: true })
+    .click();
+  await expect(page.getByLabel("Your question")).toBeVisible();
+  const release = openai.holdTranscription("Before the break");
+  const pending = page.request.post(`${path}/transcription`, {
+    headers: {
+      origin: app.url,
+      "Content-Type": "audio/wav",
+      "X-Recording-Id": "before-pause",
+    },
+    data: wav(),
+  });
+  await expect.poll(() => openai.requests.length).toBe(1);
+  await page.getByRole("button", { name: "Take a break", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Resume activity", exact: true })
+    .click();
+  await expect(page.getByLabel("Your question")).toBeVisible();
+  release();
+  expect((await pending).status()).toBe(409);
+  await expect(page.getByLabel("Your question")).toHaveValue("");
+  await expect(page.getByLabel("Review your transcription")).toHaveCount(0);
+});
+
+test("late microphone permission cannot reopen capture in another profile", async ({
+  page,
+  openai,
+}) => {
+  await setup(page);
+  await page.evaluate(() => {
+    const original = navigator.mediaDevices.getUserMedia.bind(
+      navigator.mediaDevices,
+    );
+    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
+      configurable: true,
+      value: () =>
+        new Promise<MediaStream>((resolve) => {
+          (window as any).releaseMicrophone = async () =>
+            resolve(await original({ audio: true }));
+        }),
+    });
+  });
+  await page
+    .getByRole("button", { name: "Record a message", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Waiting for microphone permission" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Switch Learner" }).click();
+  await page.getByRole("button", { name: "Open Sky’s workspace" }).click();
+  await page.evaluate(() => (window as any).releaseMicrophone());
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as any).speechFixture.streams.flatMap((stream: MediaStream) =>
+          stream.getTracks().map((track) => track.readyState),
+        ),
+      ),
+    )
+    .toEqual(["ended"]);
+  await page.getByRole("button", { name: "Start an activity" }).click();
+  await expect(page.getByLabel("Your question")).toHaveValue("");
+  expect(openai.requests).toHaveLength(0);
+});
+
+test("contradictory speech duration cannot release a minute reservation", async ({
+  page,
+  app,
+  openai,
+}) => {
+  await setup(page);
+  const { path } = await currentPath(page);
+  openai.transcribe("A fictional long explanation.", {
+    type: "duration",
+    seconds: 1,
+  });
+  const response = await page.request.post(`${path}/transcription`, {
+    headers: {
+      origin: app.url,
+      "Content-Type": "audio/wav",
+      "X-Recording-Id": "long-recording",
+    },
+    data: wav(60),
+  });
+  expect(response.status()).toBe(200);
+  expect(
+    await (
+      await page.request.get("/api/model-access?operation=transcription")
+    ).json(),
+  ).toMatchObject({ unknownNanoUsd: "4500000", settledNanoUsd: "0" });
 });
