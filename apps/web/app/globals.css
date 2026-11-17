@@ -1297,3 +1297,62 @@ select:focus-visible {
     gap: 0;
   }
 }
+
+.continuity-panel,
+.learning-notes {
+  background: var(--paper, #fffdf7);
+  border: 1px solid #d7d5c9;
+  border-radius: 18px;
+  padding: 1.5rem;
+  max-width: 52rem;
+}
+.continuity-panel .next-step {
+  font-size: 1.35rem;
+  line-height: 1.5;
+}
+.learning-notes textarea {
+  min-height: 4.5rem;
+}
+.learning-notes label {
+  display: block;
+  margin-top: 1rem;
+}
+.learning-notes small {
+  display: block;
+  margin-top: 1rem;
+}
+.notes-dialog .learning-notes {
+  border: 0;
+  padding: 0;
+}
+.continuity-panel .primary,
+.learning-notes .primary {
+  background: var(--ink);
+  color: var(--white);
+  border-color: var(--ink);
+}
+.learning-notes {
+  padding: 18px 24px;
+}
+.learning-notes h2 {
+  margin: 0 0 8px;
+}
+.learning-notes p {
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 10px 0;
+}
+.learning-notes label {
+  margin-top: 8px;
+}
+.learning-notes textarea,
+.work-pad .notes-dialog textarea {
+  min-height: 54px;
+  height: 54px;
+  padding: 10px 12px;
+}
+.learning-notes small {
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 10px;
+}

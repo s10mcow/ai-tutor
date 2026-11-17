@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { LearningSession } from "../../../../lib/coaching-contract";
 import type { GameInput } from "../../../../lib/maths-game-contract";
+import { RememberNotes } from "./learning-notes";
 import { SaveEvidence } from "./save-evidence";
 
 export function MathsGame({
@@ -322,6 +323,12 @@ export function MathsGame({
               </details>
             )}
             <SaveEvidence session={session} />
+            {session.actions.some((action) => action.status === "complete") && (
+              <RememberNotes
+                learnerId={session.learnerId}
+                sessionId={session.id}
+              />
+            )}
           </section>
         </div>
       )}

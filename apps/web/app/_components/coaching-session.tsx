@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { RememberNotes, ReturnVisit } from "./learning-notes";
 import { SaveEvidence } from "./save-evidence";
 import { TutorAccessNote } from "./model-access";
 import type { Learner } from "../../../../lib/family";
@@ -123,7 +124,7 @@ export function CoachingSession({
   useEffect(() => {
     conversation.current?.scrollTo({ top: conversation.current.scrollHeight });
   }, [session]);
-  async function start(activity?: ActivityLaunch) {
+  async function start(activity?: ActivityLaunch, resume = false) {
     const signal = lifetime.current!.signal;
     setBusy(true);
     setError("");
@@ -131,7 +132,7 @@ export function CoachingSession({
       const value = await sessionRequest(
         url,
         signal,
-        activity ? { activity } : {},
+        resume ? { resume: true } : activity ? { activity } : {},
       );
       if (!signal.aborted) receive(value);
     } catch (error) {
@@ -252,7 +253,13 @@ export function CoachingSession({
             {error}
           </p>
         )}
-        <ActivityDiscovery busy={busy} onChoose={start} />
+        <ReturnVisit
+          learnerId={learner.id}
+          busy={busy}
+          onResume={() => void start(undefined, true)}
+        >
+          <ActivityDiscovery busy={busy} onChoose={start} />
+        </ReturnVisit>
       </>
     );
   if (session?.activity?.kind === "maths-game")
@@ -323,6 +330,13 @@ export function CoachingSession({
           leave.
         </small>
         {session && <SaveEvidence key={session.id} session={session} />}
+        {session?.actions.some((action) => action.status === "complete") && (
+          <RememberNotes
+            key={`notes-${session.id}`}
+            learnerId={learner.id}
+            sessionId={session.id}
+          />
+        )}
       </section>
       <section className="tutor-panel coaching-panel" aria-label="Conversation">
         <div className="coaching-heading">
@@ -499,7 +513,8 @@ export function CoachingSession({
             )}
             <small>
               This conversation lasts up to 24 hours. End activity clears it
-              now. Only work you choose to save stays in your Portfolio.
+              now. Only learning notes and Portfolio work you choose to save
+              stay.
             </small>
           </>
         )}

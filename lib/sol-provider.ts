@@ -10,6 +10,7 @@ export async function solReply(context: TutorRequest): Promise<string> {
       content: JSON.stringify({
         currentQuestion: context.problem,
         activity: context.activity,
+        learningNotes: context.learningNotes,
       }),
     },
     ...context.actions.flatMap((action) => [
