@@ -17,12 +17,12 @@ export type MeteredResult<T> = {
 // This function stores billing metadata only; application records own replayable results.
 export async function meteredOperation<T>(operation: {
   attemptId: string;
-  kind: "text";
+  kind: "text" | "image";
   pricePolicy: string;
   maximumNanoUsd: bigint;
   dispatch: (config: ProviderConfiguration) => Promise<MeteredResult<T>>;
 }): Promise<T> {
-  const config = providerConfiguration();
+  const config = providerConfiguration(operation.kind);
   if (config.reason !== "available" || operation.maximumNanoUsd <= 0n)
     throw new Error("Model access is closed");
   const client = await database.connect();
@@ -38,7 +38,7 @@ export async function meteredOperation<T>(operation: {
         [config.windowId],
       )
     ).rows[0];
-    const current = providerConfiguration();
+    const current = providerConfiguration(operation.kind);
     if (
       current.reason !== "available" ||
       current.identity !== config.identity ||

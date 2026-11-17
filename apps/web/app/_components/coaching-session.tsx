@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SessionPicture } from "./session-picture";
 import { RememberNotes, ReturnVisit } from "./learning-notes";
 import { SaveEvidence } from "./save-evidence";
 import { TutorAccessNote } from "./model-access";
@@ -55,11 +56,15 @@ export function CoachingSession({
   const lastAction = session?.actions.at(-1);
   const failed = lastAction?.status === "failed" ? lastAction : null;
   const waiting = lastAction?.status === "pending";
-  const blocked = busy || ending || waiting || !!failed || !!unsent;
+  const imageUnconfirmed = session?.images.some(
+    (image) => image.status !== "confirmed",
+  );
+  const blocked =
+    busy || ending || waiting || !!failed || !!unsent || imageUnconfirmed;
   function receive(value: LearningSession | null) {
     setSession(value);
     const last = value?.actions.at(-1);
-    setIntent(value?.problem ? "attempt" : "question");
+    setIntent(value?.actions.length ? "attempt" : "question");
     if (last?.status === "failed") setText(last.text);
     if (!value?.actions.length && value?.activity?.kind === "custom")
       setText(value.activity.starter);
@@ -223,7 +228,7 @@ export function CoachingSession({
         {session?.activity && (
           <div className="activity-purpose">
             <strong>{session.activity.title}</strong>
-            <p>{session.activity.purpose}</p>
+            {!imageUnconfirmed && <p>{session.activity.purpose}</p>}
             {separateInterest && hasQuestion && (
               <button
                 className="text-button"
@@ -240,12 +245,28 @@ export function CoachingSession({
             )}
           </div>
         )}
-        <h2>{hasQuestion ? "Our question" : "What are you wondering?"}</h2>
-        <p className="current-problem">
-          {session?.problem ||
-            session?.activity?.starter ||
-            "Bring a question. There’s room to work it out here."}
-        </p>
+        <h2>
+          {imageUnconfirmed
+            ? "Check your picture"
+            : hasQuestion
+              ? "Our question"
+              : "What are you wondering?"}
+        </h2>
+        {!imageUnconfirmed && (
+          <p className="current-problem">
+            {session?.problem ||
+              session?.activity?.starter ||
+              "Bring a question. There’s room to work it out here."}
+          </p>
+        )}
+        {session && (
+          <SessionPicture
+            key={`picture-${session.id}`}
+            session={session}
+            disabled={busy || ending || waiting || !!failed || !!unsent}
+            onChange={receive}
+          />
+        )}
         <label htmlFor="scratchpad">My scratchpad</label>
         <textarea
           id="scratchpad"
@@ -256,7 +277,9 @@ export function CoachingSession({
         <small>
           This scratchpad is temporary. It clears when you leave this workspace.
         </small>
-        {session && <SaveEvidence key={session.id} session={session} />}
+        {session && (
+          <SaveEvidence key={`evidence-${session.id}`} session={session} />
+        )}
         {session?.actions.some((action) => action.status === "complete") && (
           <RememberNotes
             key={`notes-${session.id}`}

@@ -232,8 +232,10 @@ test.describe("direct metered Tutor continuity", () => {
       JSON.parse(openai.requests.at(-1)!.body.input[0].content).learningNotes,
     ).toBeNull();
     expect(JSON.stringify(openai.requests.at(-1)!.body)).not.toContain("bread");
+    // Disconnect the development hot-reload client before restarting the server.
+    await page.goto("about:blank");
     await app.restart({ TUTOR_FIXTURE_ALLOWANCE_NANO_USD: "0" });
-    await page.reload();
+    await page.goto(app.url);
     await page.getByRole("button", { name: "Switch Learner" }).click();
     await page.getByRole("button", { name: "Open River’s workspace" }).click();
     await page
