@@ -3,13 +3,11 @@ import { modelAccess } from "../../../../../lib/model-access";
 export async function GET(request: Request) {
   return familyResponse(async () => {
     await requireFamily(request);
-    const operation = new URL(request.url).searchParams.get("operation");
+    const kind = new URL(request.url).searchParams.get("operation");
     return modelAccess(
-      operation === "research"
-        ? "research"
-        : new URL(request.url).searchParams.get("operation") === "image"
-          ? "image"
-          : "text",
+      kind === "research" || kind === "transcription" || kind === "image"
+        ? kind
+        : "text",
     );
   });
 }

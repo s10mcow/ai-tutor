@@ -66,7 +66,17 @@ export function PortfolioEntryView({
       </div>
       {showing && <p className="eyebrow">MY WORK, MY THINKING</p>}
       <h2>{saved.title}</h2>
-      <h3>My written work</h3>
+      {saved.images.map((picture) => (
+        <figure className="portfolio-picture" key={picture.id}>
+          <img
+            src={`/api/learners/${entry.learnerId}/portfolio/${entry.id}/images/${picture.id}`}
+            alt={`Saved ${picture.kind} picture`}
+            width={picture.width}
+            height={picture.height}
+          />
+        </figure>
+      ))}
+      {saved.evidence.length > 0 && <h3>My written work</h3>}
       {saved.evidence.map((work) => (
         <blockquote key={work.actionId}>{work.text}</blockquote>
       ))}
@@ -97,7 +107,15 @@ export function PortfolioEntryView({
             </p>
           )}
           <div className="portfolio-entry-actions">
-            <button className="primary" disabled={busy}>
+            <button
+              className="primary"
+              disabled={
+                busy ||
+                (!!saved.images.length &&
+                  !saved.evidence.length &&
+                  !reflection.trim())
+              }
+            >
               {busy ? "Saving…" : "Save reflection"}
             </button>
             <button

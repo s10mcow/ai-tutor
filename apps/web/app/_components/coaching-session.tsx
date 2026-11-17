@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PublicSources } from "./public-sources";
+import { VoiceMessage } from "./voice-message";
+import { ReadAloud } from "./read-aloud";
 import { SessionPicture } from "./session-picture";
 import { RememberNotes, ReturnVisit } from "./learning-notes";
 import { SaveEvidence } from "./save-evidence";
@@ -46,6 +48,8 @@ export function CoachingSession({
 }) {
   const [session, setSession] = useState<LearningSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewingVoice, setReviewingVoice] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [ending, setEnding] = useState(false);
   const [changingBreak, setChangingBreak] = useState(false);
   const activityVersion = useRef(0);
@@ -502,69 +506,89 @@ export function CoachingSession({
               </div>
             ) : (
               <>
-                <form
-                  onSubmit={(event: FormEvent) => {
-                    event.preventDefault();
-                    action(intent, text);
-                  }}
-                >
-                  {hasQuestion && (
-                    <>
-                      <label htmlFor="message-purpose">Message purpose</label>
-                      <select
-                        id="message-purpose"
-                        value={intent}
-                        onChange={(event) =>
-                          setIntent(event.target.value as CoachingIntent)
-                        }
-                        disabled={blocked}
-                      >
-                        <option value="attempt">Share attempt</option>
-                        <option value="revision">Revise my conclusion</option>
-                        <option value="question">Ask a question</option>
-                        <option value="evidence">
-                          Check supplied evidence
-                        </option>
-                        <option value="challenge">
-                          Question the Tutor’s claim
-                        </option>
-                        <option value="correction">Correct question</option>
-                      </select>
-                    </>
-                  )}
-                  <p className="reasoning-prompt">
-                    What did you try, why, and what could change your mind?
-                  </p>
-                  <label htmlFor="coaching-text">
-                    {hasQuestion ? "Your message" : "Your question"}
-                  </label>
-                  <textarea
-                    id="coaching-text"
-                    value={text}
-                    onChange={(event) => setText(event.target.value)}
-                    maxLength={2000}
-                    required
+                <div className="voice-tools">
+                  <VoiceMessage
+                    key={`voice-${session.id}`}
+                    url={`${url}/${session.id}`}
                     disabled={blocked}
+                    onUse={setText}
+                    onActive={setCapturing}
+                    onReview={setReviewingVoice}
                   />
-                  <button
-                    className="primary"
-                    disabled={blocked || !text.trim()}
+                  <ReadAloud
+                    text={
+                      session.actions.findLast((entry) => entry.reply)?.reply ??
+                      ""
+                    }
+                    disabled={blocked || capturing}
+                  />
+                </div>
+                {!reviewingVoice && (
+                  <form
+                    onSubmit={(event: FormEvent) => {
+                      event.preventDefault();
+                      action(intent, text);
+                    }}
                   >
-                    {submitLabel} <span aria-hidden="true">↗</span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={blocked || !text.trim()}
-                    onClick={() => action("research", text)}
-                  >
-                    Check public sources
-                  </button>
-                  <small>
-                    Find and read public information only. Each lookup uses the
-                    shared app allowance. Do not include personal details in a
-                    public search.
-                  </small>
-                </form>
+                    {hasQuestion && (
+                      <>
+                        <label htmlFor="message-purpose">Message purpose</label>
+                        <select
+                          id="message-purpose"
+                          value={intent}
+                          onChange={(event) =>
+                            setIntent(event.target.value as CoachingIntent)
+                          }
+                          disabled={blocked}
+                        >
+                          <option value="attempt">Share attempt</option>
+                          <option value="revision">Revise my conclusion</option>
+                          <option value="question">Ask a question</option>
+                          <option value="evidence">
+                            Check supplied evidence
+                          </option>
+                          <option value="challenge">
+                            Question the Tutor’s claim
+                          </option>
+                          <option value="correction">Correct question</option>
+                        </select>
+                      </>
+                    )}
+                    <p className="reasoning-prompt">
+                      What did you try, why, and what could change your mind?
+                    </p>
+                    <label htmlFor="coaching-text">
+                      {hasQuestion ? "Your message" : "Your question"}
+                    </label>
+                    <textarea
+                      id="coaching-text"
+                      value={text}
+                      onChange={(event) => setText(event.target.value)}
+                      maxLength={2000}
+                      required
+                      disabled={blocked}
+                    />
+                    <button
+                      className="primary"
+                      disabled={blocked || !text.trim()}
+                    >
+                      {submitLabel} <span aria-hidden="true">↗</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="source-inspect"
+                      disabled={blocked || !text.trim()}
+                      onClick={() => action("research", text)}
+                    >
+                      Check public sources
+                    </button>
+                    <small>
+                      Find and read public information only. Each lookup uses
+                      the shared app allowance. Do not include personal details
+                      in a public search.
+                    </small>
+                  </form>
+                )}
               </>
             )}
             <small>

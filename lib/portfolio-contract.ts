@@ -6,11 +6,18 @@ export type WrittenEvidence = {
   text: string;
   intent: string;
 };
+export type PortfolioImage = {
+  id: string;
+  kind: "workbook" | "art";
+  width: number;
+  height: number;
+};
 export type PortfolioEntry = {
   id: string;
   learnerId: string;
   title: string;
   evidence: WrittenEvidence[];
+  images: PortfolioImage[];
   reflection: string;
   createdAt: string;
 };
@@ -22,6 +29,7 @@ export type WrittenEvidenceInput = {
   id: string;
   sessionId: string;
   actionIds: string[];
+  imageIds?: string[];
   title: string;
   reflection: string;
 };

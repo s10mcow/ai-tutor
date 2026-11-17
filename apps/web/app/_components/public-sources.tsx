@@ -8,7 +8,11 @@ export function PublicSources({ result }: { result: ResearchResult }) {
   return (
     <section className="public-sources" aria-label="Public source check">
       <SourceContent result={result} />
-      <button type="button" onClick={() => dialog.current?.showModal()}>
+      <button
+        type="button"
+        className="source-inspect"
+        onClick={() => dialog.current?.showModal()}
+      >
         Inspect this source check
       </button>
       <dialog ref={dialog} className="source-dialog" aria-labelledby={titleId}>

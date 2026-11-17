@@ -1396,8 +1396,106 @@ select:focus-visible {
   margin-top: 10px;
 }
 
+.voice-message {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+}
+.voice-message small,
+.voice-message label,
+.voice-message textarea {
+  width: 100%;
+}
+.voice-message textarea {
+  min-height: 68px;
+}
+.voice-message p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+.read-aloud {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.read-aloud button,
+.voice-message button {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+}
 .session-picture[data-confirmed="false"] .attached-picture {
   max-height: 110px;
+}
+
+.evidence-picture-preview {
+  width: 125px;
+  max-height: 80px;
+  object-fit: contain;
+  margin-left: auto;
+}
+.portfolio-picture {
+  margin: 16px 0;
+}
+.portfolio-picture img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.voice-tools {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: start;
+}
+.voice-tools .voice-message {
+  padding: 8px 0;
+}
+.voice-tools .read-aloud {
+  padding-top: 8px;
+}
+.voice-tools .voice-message small {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.voice-tools:has(#transcript) {
+  grid-template-columns: 1fr;
+}
+.voice-tools:has(#transcript) .read-aloud {
+  display: none;
+}
+.voice-tools button {
+  background: var(--white);
+  border: 1px solid #9cac8e;
+  border-radius: 8px;
+}
+@media (min-width: 951px) and (max-height: 850px) {
+  .workspace-main:has(.coaching-columns) > .eyebrow,
+  .workspace-main:has(.coaching-columns) > .intro {
+    display: none;
+  }
+  .coaching-panel .conversation {
+    max-height: 110px;
+  }
+}
+@media (max-width: 650px) {
+  .voice-tools {
+    grid-template-columns: 1fr;
+  }
+}
+.voice-tools .read-aloud {
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 250px;
+}
+.voice-tools .read-aloud small {
+  font-size: 11px;
 }
 
 .public-sources {
@@ -1437,4 +1535,19 @@ select:focus-visible {
 }
 .source-dialog form {
   margin-top: 20px;
+}
+
+.source-inspect,
+.source-dialog button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid #9bad90;
+  border-radius: 8px;
+  background: #fffef8;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.source-inspect {
+  margin-top: 10px;
 }

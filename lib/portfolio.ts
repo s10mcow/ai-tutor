@@ -4,6 +4,7 @@ import { AccessError, requireLearner, type FamilyAccess } from "./family.ts";
 import {
   canSaveWrittenAction,
   type PortfolioEntry,
+  type PortfolioImage,
   type PortfolioSummary,
   type WrittenEvidence,
   type WrittenEvidenceInput,
@@ -17,6 +18,7 @@ type EntryRow = {
   save_fingerprint: string;
   title: string;
   evidence: WrittenEvidence[];
+  images: PortfolioImage[];
   reflection: string;
   created_at: Date;
 };
@@ -26,6 +28,7 @@ function entry(row: EntryRow): PortfolioEntry {
     learnerId: row.learner_id,
     title: row.title,
     evidence: row.evidence,
+    images: row.images,
     reflection: row.reflection,
     createdAt: row.created_at.toISOString(),
   };
@@ -39,15 +42,20 @@ function parseInput(value: unknown): WrittenEvidenceInput {
     !validId(input.id) ||
     !validId(input.sessionId) ||
     !Array.isArray(input.actionIds) ||
-    input.actionIds.length < 1 ||
     input.actionIds.length > 40 ||
     !input.actionIds.every(validId) ||
     new Set(input.actionIds).size !== input.actionIds.length ||
+    (input.imageIds !== undefined &&
+      (!Array.isArray(input.imageIds) ||
+        input.imageIds.length > 1 ||
+        !input.imageIds.every(validId))) ||
+    (!input.actionIds.length && !input.imageIds?.length) ||
     typeof input.title !== "string" ||
     !input.title.trim() ||
     input.title.trim().length > 100 ||
     typeof input.reflection !== "string" ||
-    input.reflection.length > 4000
+    input.reflection.length > 4000 ||
+    (!input.actionIds.length && !input.reflection.trim())
   ) {
     throw new AccessError(
       400,
@@ -60,6 +68,7 @@ function parseInput(value: unknown): WrittenEvidenceInput {
     actionIds: input.actionIds,
     title: input.title.trim(),
     reflection: input.reflection,
+    ...(input.imageIds?.length ? { imageIds: input.imageIds } : {}),
   };
 }
 export async function listPortfolio(
@@ -161,9 +170,30 @@ export async function saveWrittenEvidence(
       text: action.text,
       intent: action.intent,
     }));
+    // Lock the selected normalized source until its independent copy commits.
+    // Deleting a source picture or its activity must wait for this transaction.
+    const pictures = input.imageIds?.length
+      ? (
+          await client.query<PortfolioImage & { bytes: Buffer }>(
+            "SELECT id, kind, width, height, bytes FROM session_image WHERE session_id = $1 AND id = ANY($2::text[]) FOR SHARE",
+            [input.sessionId, input.imageIds],
+          )
+        ).rows
+      : [];
+    if (pictures.length !== (input.imageIds?.length ?? 0))
+      throw new AccessError(
+        404,
+        "That picture is no longer available to save.",
+      );
+    const images = pictures.map(({ id, kind, width, height }) => ({
+      id,
+      kind,
+      width,
+      height,
+    }));
     const row = (
       await client.query<EntryRow>(
-        "INSERT INTO portfolio_entry (id, family_id, learner_id, title, evidence, reflection, save_fingerprint) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+        "INSERT INTO portfolio_entry (id, family_id, learner_id, title, evidence, reflection, save_fingerprint, images) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
         [
           input.id,
           access.familyId,
@@ -172,9 +202,15 @@ export async function saveWrittenEvidence(
           JSON.stringify(evidence),
           input.reflection,
           fingerprint,
+          JSON.stringify(images),
         ],
       )
     ).rows[0];
+    for (const picture of pictures)
+      await client.query(
+        "INSERT INTO portfolio_image(entry_id, id, bytes) VALUES ($1, $2, $3)",
+        [input.id, picture.id, picture.bytes],
+      );
     await client.query("COMMIT");
     return entry(row);
   } catch (error) {
@@ -201,6 +237,14 @@ export async function editReflection(
   ) {
     throw new AccessError(400, "Keep your reflection under 4,000 characters.");
   }
+  if (!value.reflection.trim()) {
+    const existing = await readPortfolioEntry(access, learnerId, entryId);
+    if (existing.images.length && !existing.evidence.length)
+      throw new AccessError(
+        400,
+        "Keep your own explanation or reflection alongside your picture.",
+      );
+  }
   const row = (
     await database.query<EntryRow>(
       "UPDATE portfolio_entry SET reflection = $4, updated_at = now() WHERE id = $1 AND family_id = $2 AND learner_id = $3 RETURNING *",
@@ -209,4 +253,23 @@ export async function editReflection(
   ).rows[0];
   if (!row) throw new AccessError(404, "That Portfolio entry is unavailable.");
   return entry(row);
+}
+
+// The owning entry is the authority; a source image ID alone grants no access.
+export async function readPortfolioImage(
+  access: FamilyAccess,
+  learnerId: string,
+  entryId: string,
+  imageId: string,
+): Promise<Buffer> {
+  await requireLearner(access, learnerId);
+  const row = (
+    await database.query<{ bytes: Buffer }>(
+      "SELECT image.bytes FROM portfolio_image image JOIN portfolio_entry entry ON entry.id = image.entry_id WHERE entry.id = $1 AND entry.family_id = $2 AND entry.learner_id = $3 AND image.id = $4",
+      [entryId, access.familyId, learnerId, imageId],
+    )
+  ).rows[0];
+  if (!row)
+    throw new AccessError(404, "That Portfolio picture is unavailable.");
+  return row.bytes;
 }

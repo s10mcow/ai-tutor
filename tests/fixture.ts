@@ -3,6 +3,7 @@ import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { Client } from "pg";
 import { createServer } from "node:net";
 
 import { controlledOpenAI } from "./openai-provider";
@@ -22,6 +23,7 @@ export const test = base.extend<{
   app: {
     url: string;
     restart: (settings?: Record<string, string>) => Promise<void>;
+    configureDatabase: (sql: string) => Promise<void>;
   };
   tutor: Awaited<ReturnType<typeof controlledTutor>>;
   openai: Awaited<ReturnType<typeof controlledOpenAI>>;
@@ -192,6 +194,17 @@ export const test = base.extend<{
         await start();
         await use({
           url,
+          // Set up real database faults/fixtures, never expose query results as
+          // a parallel assertion seam. Behavior is observed through the app.
+          configureDatabase: async (sql) => {
+            const client = new Client({ connectionString: env.DATABASE_URL });
+            await client.connect();
+            try {
+              await client.query(sql);
+            } finally {
+              await client.end();
+            }
+          },
           restart: async (settings = {}) => {
             Object.assign(env, settings);
             await stop();
