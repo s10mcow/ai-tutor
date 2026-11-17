@@ -38,18 +38,7 @@ async function picture() {
       .toBuffer(),
   };
 }
-test.use({
-  controlledTutorEnabled: false,
-  modelEnvironment: {
-    TUTOR_OPENAI_FIXTURE_URL: "fixture",
-    TUTOR_FIXTURE_ALLOWANCE_NANO_USD: "16000000000",
-  },
-});
-test("taking a break during upload prevents picture interpretation until the Learner resumes", async ({
-  page,
-  openai,
-}) => {
-  await setup(page);
+async function holdPictureUpload(page: Page) {
   let release!: () => void;
   const uploading = new Promise<void>((resolve) => {
     release = resolve;
@@ -62,6 +51,21 @@ test("taking a break during upload prevents picture interpretation until the Lea
     }
     await route.continue();
   });
+  return { release, hasStarted: () => uploadStarted };
+}
+test.use({
+  controlledTutorEnabled: false,
+  modelEnvironment: {
+    TUTOR_OPENAI_FIXTURE_URL: "fixture",
+    TUTOR_FIXTURE_ALLOWANCE_NANO_USD: "16000000000",
+  },
+});
+test("taking a break during upload prevents picture interpretation until the Learner resumes", async ({
+  page,
+  openai,
+}) => {
+  await setup(page);
+  const upload = await holdPictureUpload(page);
   openai.reply(
     JSON.stringify({ readable: true, description: "24 pencils in 6 cups" }),
   );
@@ -72,7 +76,7 @@ test("taking a break during upload prevents picture interpretation until the Lea
     await page
       .getByRole("button", { name: "Read picture", exact: true })
       .click();
-    await expect.poll(() => uploadStarted).toBe(true);
+    await expect.poll(upload.hasStarted).toBe(true);
     await page
       .getByRole("button", { name: "Take a break", exact: true })
       .click();
@@ -84,7 +88,7 @@ test("taking a break during upload prevents picture interpretation until the Lea
         response.url().includes("/images/") &&
         response.request().method() === "PATCH",
     );
-    release();
+    upload.release();
     expect((await interpretation).status()).toBe(409);
     expect(openai.requests).toHaveLength(0);
     await expect(
@@ -99,7 +103,7 @@ test("taking a break during upload prevents picture interpretation until the Lea
     );
     expect(openai.requests).toHaveLength(1);
   } finally {
-    release();
+    upload.release();
   }
 });
 
@@ -109,18 +113,7 @@ for (const recovery of ["Confirm picture", "Remove picture"]) {
     openai,
   }) => {
     await setup(page);
-    let release!: () => void;
-    const uploading = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    let uploadStarted = false;
-    await page.route("**/images/*", async (route) => {
-      if (route.request().method() === "POST") {
-        uploadStarted = true;
-        await uploading;
-      }
-      await route.continue();
-    });
+    const upload = await holdPictureUpload(page);
     try {
       await page
         .getByLabel("Workbook or artwork picture")
@@ -128,7 +121,7 @@ for (const recovery of ["Confirm picture", "Remove picture"]) {
       await page
         .getByRole("button", { name: "Read picture", exact: true })
         .click();
-      await expect.poll(() => uploadStarted).toBe(true);
+      await expect.poll(upload.hasStarted).toBe(true);
       openai.fail();
       await page
         .getByLabel("Your question")
@@ -142,7 +135,7 @@ for (const recovery of ["Confirm picture", "Remove picture"]) {
       openai.reply(
         JSON.stringify({ readable: true, description: "24 pencils in 6 cups" }),
       );
-      release();
+      upload.release();
       await expect(
         page.getByLabel("Check the picture description"),
       ).toHaveValue("24 pencils in 6 cups");
@@ -169,7 +162,7 @@ for (const recovery of ["Confirm picture", "Remove picture"]) {
       expect(session.actions[0].status).toBe("complete");
       expect(openai.requests).toHaveLength(3);
     } finally {
-      release();
+      upload.release();
     }
   });
 }
