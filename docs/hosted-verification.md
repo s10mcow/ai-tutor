@@ -2,9 +2,22 @@
 
 Checked on 2026-11-17 UTC using fictional accounts, text and generated media. The application is at [Learning Studio](https://ai-tutor-ten-puce.vercel.app), on the parent's authorized Vercel Pro and Neon Launch accounts.
 
-The deployed application revision is `93cba83ea129efb7fdd3d6bd52229d086d14421b`, deployment `dpl_8MNubNbyq7FaposrBkkipt7kCXZo`, status **READY**. Later documentation-only commits record these observations. The reviewed implementation, targeted test results and remaining external gates are in [the final review](final-review.md).
+The current deployed application revision is `4f09fa9626a6c8611f7620b1f18d7933ee5ef3ce`, deployment `dpl_71bbBaMm8vNcfscAkGRpNs6RdF9x`, target **production**, status **READY**. The canonical alias serves this revision. Its build completed in approximately 15 seconds. Later documentation-only commits record the release evidence.
 
-## Application observations
+## Review-fix release, 2026-11-17 12:49–12:53 UTC
+
+The parent authorized finishing the release after [all review fixes](review-fixes.md), 100 passing application scenarios, three final targeted checks, typechecking, production builds, and clear Standards/Spec reviews.
+
+- Migration `15-coaching-failures.sql` was staged on a temporary branch of the existing Neon database. The nullable text column and context-limit constraint were verified there. The repository's migration runner then applied it to `ai_tutor` through the verified direct endpoint and recorded it at **12:49:12.087 UTC**. The temporary verification branch was deleted; the original branch is the only active branch.
+- Real hosted password sign-in, Learner creation, and activity creation/readback passed using a temporary fictional account. The account was provisioned with the application's Better Auth library and a process-local test invitation; no deployed invitation or authentication setting changed.
+- A synthetic context-limit action verified the new database column → session API → browser flow. Reload showed new-activity guidance and no futile retry button. The Learner could save the attempt as evidence and start another activity. This seeded-state smoke check complements the local application regression that actually exceeds the provider payload ceiling; it is not a live-model test.
+- A real browser upload was delayed while the activity was paused. Completing the upload produced **409** on interpretation with resume guidance. Resuming and removing the picture recovered normally. Provider readiness remained `missing_credentials` for all four operations, and charges/reservations/unknown usage remained zero.
+- Hosted sign-out returned to sign-in and revoked family access. The homepage returned **200**; anonymous family and cron endpoints returned **401**. The temporary account and cascading records were removed. Database checks afterward found zero users, families, Learners, activities, actions, temporary pictures, Portfolio entries, or model operations, while retaining the migration record.
+- The new deployment's error/fatal runtime scan returned no records in the inspected window. No drains are configured; this is a release-time sample, not a claim of continuous monitoring. No deployment-protection bypass or provider credential was introduced.
+
+The production site is updated, while the live-family provider and pilot gates described below remain open. The following broader observations are historical checks of revision `93cba83ea129efb7fdd3d6bd52229d086d14421b`, deployment `dpl_8MNubNbyq7FaposrBkkipt7kCXZo`; they were not all repeated for this release.
+
+## Earlier application observations
 
 - Real hosted parent authentication, separate Learner profiles, switching and fresh-browser/password return passed. The canonical URL serves sign-in without a Vercel bypass; anonymous family and media requests return 401.
 - The short equal-sharing game gave feedback for a wrong attempt, supplied an example and accepted explained solutions. A game-backed learning note remained with its Learner. The sibling's notes were separate, and a wrong-Learner session path returned 404.

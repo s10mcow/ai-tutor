@@ -11,7 +11,7 @@ Review baseline: `f682e10`. Implementation: `da9d15b` on `integration/ai-tutor`.
 - Portfolio reflection editing uses one shared browser/server eligibility rule. Saved audio permits an empty written reflection alongside a picture.
 - Four tests no longer assert literal prompt wording. Existing data-selection, input/instruction separation, model, tool, and capability checks remain. Real-model teaching evaluation remains a separately gated activity.
 
-Apply `migrations/15-coaching-failures.sql` through the normal migration command before deploying this application version. It adds a nullable context-limit reason to existing activity actions. No hosted migration or deployment was performed as part of these fixes.
+`migrations/15-coaching-failures.sql` adds a nullable context-limit reason to existing activity actions. Following the parent's instruction to finish the release, it was verified on an isolated Neon branch and applied through the normal migration runner at 2026-11-17 12:49:12 UTC. The temporary branch was removed. Revision `4f09fa9` is deployed to production; [hosted verification](hosted-verification.md) records the release and smoke checks.
 
 ## Validation
 
