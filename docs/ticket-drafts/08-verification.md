@@ -38,3 +38,11 @@ The adopted seam is Playwright through real Better Auth, application routes and 
 Laptop review uses 1366 × 768 screenshots of confirmation, workbook and art. The current question/picture and conversation remain side by side; the editor is bounded in height. Typing-only activities expose a compact Attach a picture action. React guidance was reviewed for component boundaries, browser-safe imports, cleanup, labelled controls and minimal serialized metadata.
 
 Final commands/results are recorded after integration below. External live teaching quality, actual provider image readability/response schema, under-13 approval, credits, hosting and deployed cleanup remain unverified pilot gates.
+
+- `npm run test:browser -- tests/image-coaching.spec.ts`: **7 passed** after merging integration through `21cc4ae` and the final laptop/key fixes. This is the complete new feature file, not the repository suite.
+- The merge preserved `learningNotes`, the owned game state and existing activity context. The common adapter still passes each into text coaching where applicable.
+- The final laptop artifacts are outside the repository at `/tmp/ai-tutor-research/ticket08/confirmation-laptop.png`, `workbook-laptop.png`, and `art-laptop.png`. The confirmation action fits at 1366 × 768. Distinct sibling component keys prevent old upload/retry panels from remaining visible after state changes.
+- Targeted shared-flow checks passed: `tests/model-access.spec.ts -g 'a direct Sol reply'`, `tests/maths-game.spec.ts -g 'a Learner chooses a starting level'`, and `tests/learning-continuity.spec.ts -g 'direct Sol receives only'`. The notes test first reached the expected isolated provider context, then encountered a development HMR `page.reload`/`ERR_ABORTED` race after restarting Next. Only that test's restart navigation now leaves for `about:blank` before restart and returns to `app.url`; all original auth, persistence, isolation and allowance assertions remain and pass.
+- `npm run typecheck`: passed with Node 26.13.1 after integration and final component changes.
+- `git diff --check`: passed. No full repository test suite was run.
+- `npm run build:web` with explicit fictional auth configuration: passed, including the owned image route. No eve code changed, so its build was not repeated.

@@ -55,6 +55,8 @@ export async function PATCH(request: Request, { params }: Context) {
     const { learnerId, sessionId, imageId } = await params;
     const access = await requireFamily(request);
     const input = await request.json();
+    if (!input || typeof input !== "object")
+      throw new AccessError(400, "Choose a picture action.");
     if (input.operation === "interpret")
       await interpretImage(access, learnerId, sessionId, imageId);
     else if (input.operation === "confirm")

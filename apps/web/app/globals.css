@@ -1302,3 +1302,7 @@ select:focus-visible {
   line-height: 1.4;
   margin-top: 10px;
 }
+
+.session-picture[data-confirmed="false"] .attached-picture {
+  max-height: 110px;
+}

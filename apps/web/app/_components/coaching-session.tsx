@@ -228,7 +228,7 @@ export function CoachingSession({
         {session?.activity && (
           <div className="activity-purpose">
             <strong>{session.activity.title}</strong>
-            <p>{session.activity.purpose}</p>
+            {!imageUnconfirmed && <p>{session.activity.purpose}</p>}
             {separateInterest && hasQuestion && (
               <button
                 className="text-button"
@@ -245,15 +245,23 @@ export function CoachingSession({
             )}
           </div>
         )}
-        <h2>{hasQuestion ? "Our question" : "What are you wondering?"}</h2>
-        <p className="current-problem">
-          {session?.problem ||
-            session?.activity?.starter ||
-            "Bring a question. There’s room to work it out here."}
-        </p>
+        <h2>
+          {imageUnconfirmed
+            ? "Check your picture"
+            : hasQuestion
+              ? "Our question"
+              : "What are you wondering?"}
+        </h2>
+        {!imageUnconfirmed && (
+          <p className="current-problem">
+            {session?.problem ||
+              session?.activity?.starter ||
+              "Bring a question. There’s room to work it out here."}
+          </p>
+        )}
         {session && (
           <SessionPicture
-            key={session.id}
+            key={`picture-${session.id}`}
             session={session}
             disabled={busy || ending || waiting || !!failed || !!unsent}
             onChange={receive}
@@ -269,7 +277,9 @@ export function CoachingSession({
         <small>
           This scratchpad is temporary. It clears when you leave this workspace.
         </small>
-        {session && <SaveEvidence key={session.id} session={session} />}
+        {session && (
+          <SaveEvidence key={`evidence-${session.id}`} session={session} />
+        )}
         {session?.actions.some((action) => action.status === "complete") && (
           <RememberNotes
             key={`notes-${session.id}`}

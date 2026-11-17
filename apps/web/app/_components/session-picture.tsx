@@ -117,7 +117,11 @@ export function SessionPicture({
       </button>
     );
   return (
-    <section className="session-picture" aria-label="Activity picture">
+    <section
+      className="session-picture"
+      aria-label="Activity picture"
+      data-confirmed={picture?.status === "confirmed"}
+    >
       {!picture ? (
         <>
           <label htmlFor="picture-kind">Picture subject</label>
@@ -190,10 +194,7 @@ export function SessionPicture({
                       below, or remove it and try a clearer picture.
                     </p>
                   ) : (
-                    <p>
-                      Check what the Tutor understood. Fix any number,
-                      instruction or detail before continuing.
-                    </p>
+                    <p>Fix any detail, then confirm what the picture shows.</p>
                   )}
                   <label htmlFor="picture-description">
                     Check the picture description
