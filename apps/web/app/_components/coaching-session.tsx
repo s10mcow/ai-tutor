@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { TutorAccessNote } from "./model-access";
 import type { Learner } from "../../../../lib/family";
 import type {
   CoachingInput,
@@ -202,10 +203,7 @@ export function CoachingSession({
             </button>
           )}
         </div>
-        <p className="small">
-          Scripted Tutor preview · fictional practice only. Live Tutor access is
-          not active.
-        </p>
+        <TutorAccessNote />
         {error && (
           <p role="alert" className="error">
             {error}
@@ -252,7 +250,9 @@ export function CoachingSession({
             {failed && (
               <p role="alert" className="error">
                 The Tutor couldn’t reply. This is a service problem, not a mark
-                on your answer. Your input is saved.
+                on your answer. Your input is saved. A retry may use more
+                allowance; unresolved provider usage stays held. Check Model
+                access for details.
               </p>
             )}
             {(failed || unsent) && (

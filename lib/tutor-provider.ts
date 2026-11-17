@@ -1,3 +1,4 @@
+import { solReply } from "./sol-provider.ts";
 import type { CoachingAction } from "./coaching-contract.ts";
 
 export type TutorRequest = {
@@ -10,11 +11,16 @@ export type TutorRequest = {
   actions: CoachingAction[];
 };
 
-// This is the only external tutoring boundary. Live dispatch/usage policy belongs
-// here in ticket 03; there is deliberately no paid provider or eve fallback.
+// Explicit scripted development preview or the metered direct provider. No fallback.
 export async function tutorReply(context: TutorRequest): Promise<string> {
+  if (
+    process.env.TUTOR_OPENAI_FIXTURE_URL ||
+    !process.env.TUTOR_PREVIEW_URL ||
+    process.env.NODE_ENV === "production"
+  )
+    return solReply(context);
   const endpoint = process.env.TUTOR_PREVIEW_URL;
-  if (!endpoint || process.env.NODE_ENV === "production") {
+  if (!endpoint) {
     throw new Error("Tutor access has not been activated");
   }
   const url = new URL(endpoint);

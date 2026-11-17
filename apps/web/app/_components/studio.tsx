@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { Learner } from "../../../../lib/family";
 
+import { ModelAccessPanel } from "./model-access";
 import { Workspace } from "./workspace";
 
 type Family = { learners: Learner[]; selectedLearnerId: string | null };
@@ -91,6 +92,7 @@ export function Studio() {
         <Brand />
         <div className="header-actions">
           <span className="preview-label">Fictional-data preview</span>
+          {family && <ModelAccessPanel />}
           {family && (
             <button
               className="text-button"
