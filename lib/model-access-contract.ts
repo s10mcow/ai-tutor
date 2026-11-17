@@ -12,4 +12,6 @@ export type ModelAccess = {
   nextTextReservationNanoUsd: string;
   checkedAt: string | null;
   expiresAt: string | null;
+  evidenceExpiresAt: string | null;
+  retentionExpiresAt: string | null;
 };

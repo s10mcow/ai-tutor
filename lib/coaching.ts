@@ -11,6 +11,7 @@ import { tutorReply } from "./tutor-provider.ts";
 import { readLearningNotes } from "./learning-notes.ts";
 import { parseActivity } from "./activities.ts";
 import type { ActivityChoice } from "./activity-contract.ts";
+import type { MathsGame } from "./maths-game-contract.ts";
 
 // Never extend an activity by reading it. Deployment may choose a shorter TTL.
 function retentionSeconds() {
@@ -30,6 +31,7 @@ type SessionRow = {
   learner_id: string;
   problem: string;
   activity: ActivityChoice | null;
+  game: MathsGame | null;
   expires_at: Date;
 };
 async function snapshot(row: SessionRow): Promise<LearningSession> {
@@ -48,6 +50,7 @@ async function snapshot(row: SessionRow): Promise<LearningSession> {
     learnerId: row.learner_id,
     problem: row.problem,
     activity: row.activity,
+    game: row.game,
     expiresAt: row.expires_at.toISOString(),
     actions,
   };
@@ -151,7 +154,12 @@ export async function submitAction(
     );
     return null;
   }
-  await readSession(access, learnerId, sessionId);
+  const current = await readSession(access, learnerId, sessionId);
+  if (current.activity?.kind === "maths-game")
+    throw new AccessError(
+      400,
+      "Use the game controls to try an idea or get help with this delivery.",
+    );
   const action = parseInput(input);
   const attemptId = randomUUID();
   let dispatch = false;
