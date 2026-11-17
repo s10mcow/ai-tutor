@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { Learner } from "../../../../lib/family";
+import { Portfolio } from "./portfolio";
 import { CoachingSession } from "./coaching-session";
 
 export function Workspace({
@@ -11,6 +12,7 @@ export function Workspace({
   onSwitch: () => void;
 }) {
   const [draft, setDraft] = useState("");
+  const [view, setView] = useState<"learning" | "portfolio">("learning");
   return (
     <div className="workspace">
       <aside className="workspace-nav">
@@ -22,6 +24,20 @@ export function Workspace({
         <button className="text-button" onClick={onSwitch}>
           Switch Learner <span aria-hidden="true">⇄</span>
         </button>
+        <nav className="workspace-views" aria-label="Workspace views">
+          <button
+            aria-pressed={view === "learning"}
+            onClick={() => setView("learning")}
+          >
+            Learning
+          </button>
+          <button
+            aria-pressed={view === "portfolio"}
+            onClick={() => setView("portfolio")}
+          >
+            My Portfolio
+          </button>
+        </nav>
         <div className="nav-note">
           <span aria-hidden="true">✦</span>
           <p>You don’t have to know the answer to make a start.</p>
@@ -33,19 +49,25 @@ export function Workspace({
         <p className="intro">
           There’s room here for a question, a first try, and a change of mind.
         </p>
-        <CoachingSession
-          learner={learner}
-          draft={draft}
-          onDraftChange={setDraft}
-        />
-        <div className="thinking-prompt">
-          <span>01</span>
-          <p>Ask a question.</p>
-          <span>02</span>
-          <p>Try an idea.</p>
-          <span>03</span>
-          <p>Explain your thinking.</p>
-        </div>
+        {view === "portfolio" ? (
+          <Portfolio learner={learner} />
+        ) : (
+          <>
+            <CoachingSession
+              learner={learner}
+              draft={draft}
+              onDraftChange={setDraft}
+            />
+            <div className="thinking-prompt">
+              <span>01</span>
+              <p>Ask a question.</p>
+              <span>02</span>
+              <p>Try an idea.</p>
+              <span>03</span>
+              <p>Explain your thinking.</p>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );

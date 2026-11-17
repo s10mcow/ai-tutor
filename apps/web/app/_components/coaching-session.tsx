@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SaveEvidence } from "./save-evidence";
+import { TutorAccessNote } from "./model-access";
 import type { Learner } from "../../../../lib/family";
 import { ActivityDiscovery } from "./activity-discovery";
 import { MathsGame } from "./maths-game";
@@ -247,6 +249,7 @@ export function CoachingSession({
         <small>
           This scratchpad is temporary. It clears when you leave this workspace.
         </small>
+        {session && <SaveEvidence key={session.id} session={session} />}
       </section>
       <section className="tutor-panel coaching-panel" aria-label="Conversation">
         <div className="coaching-heading">
@@ -260,10 +263,7 @@ export function CoachingSession({
             </button>
           )}
         </div>
-        <p className="small">
-          Scripted Tutor preview · fictional practice only. Live Tutor access is
-          not active.
-        </p>
+        <TutorAccessNote />
         {error && (
           <p role="alert" className="error">
             {error}
@@ -310,7 +310,9 @@ export function CoachingSession({
             {failed && (
               <p role="alert" className="error">
                 The Tutor couldn’t reply. This is a service problem, not a mark
-                on your answer. Your input is saved.
+                on your answer. Your input is saved. A retry may use more
+                allowance; unresolved provider usage stays held. Check Model
+                access for details.
               </p>
             )}
             {(failed || unsent) && (
@@ -402,7 +404,7 @@ export function CoachingSession({
             </form>
             <small>
               This conversation lasts up to 24 hours. End activity clears it
-              now. It is not saved to learning notes or your Portfolio.
+              now. Only work you choose to save stays in your Portfolio.
             </small>
           </>
         )}

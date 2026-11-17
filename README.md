@@ -41,6 +41,7 @@ Install the browser once:
 npx playwright install chromium
 npm run test:browser -- tests/family-workspace.spec.ts
 npm run test:browser -- tests/text-coaching.spec.ts
+npm run test:browser -- tests/model-access.spec.ts
 npm run typecheck
 npm run build
 ```
@@ -71,7 +72,7 @@ The code is prepared for a Vercel project with managed PostgreSQL. Use this repo
 
 **The hosted acceptance criterion is pending.** No cloud database or deployment is provisioned by this ticket. Existing paid account availability is not authorization for extra spending. The coordinating implementation must establish suitable hosting/storage and verify the fictional-data flow at a remotely accessible preview URL.
 
-Live-family readiness, approved provider retention, eligible credit access, allowance enforcement, and real-model teaching evaluation belong to later tickets. No OpenAI key is needed for this slice.
+Live-family account/retention evidence and real-model teaching evaluation remain final-pilot gates. Ticket 03 adds a direct Sol adapter and transactional allowance enforcement, exercised only with a controlled HTTP provider. No OpenAI key is needed for fictional fixtures.
 
 ## Temporary typed activities
 
@@ -81,7 +82,7 @@ Each Learner has one current activity. Its question and turns survive reloads an
 
 **End activity immediately deletes the activity and its turns.** Expired activities cannot be read or resumed. Session access opportunistically deletes expired records, and `npm run sessions:purge` deletes them without waiting for another visit. The hosted deployment must schedule that command at least hourly and verify deletion before live-family activation. Until the scheduler is installed, logical expiry is enforced but physical deletion during idle periods is not guaranteed. Database backups need a separately verified retention policy. Current activity context is distinct from later learning notes and explicit Portfolio saves.
 
-Submitted actions keep their identity across retries. Replaying a completed or pending action returns its existing state; changed input with the same identity is rejected. Failed replies retain the input, and a retry creates a new provider-attempt identity for the same Learner turn. The local provider timeout is 15 seconds; an orphaned pending action becomes retryable after 30 seconds. These are application recovery rules, not proof of zero provider spend after an ambiguous failure. Ticket 03 must reserve and reconcile each real attempt before enabling chargeable dispatch.
+Submitted actions keep their identity across retries. Replaying a completed or pending action returns its existing state; changed input with the same identity is rejected. Failed replies retain the input, and a retry creates a new provider-attempt identity for the same Learner turn. The local provider timeout is 15 seconds; an orphaned pending action becomes retryable after 30 seconds. These are application recovery rules, not proof of zero provider spend after an ambiguous failure. Each chargeable attempt now reserves allowance before dispatch; uncertain outcomes retain the full reservation.
 
 Implementation and follow-on contracts are recorded in [ticket 02 verification](docs/ticket-drafts/02-verification.md).
 
@@ -108,3 +109,12 @@ curl -X POST http://127.0.0.1:4321/fail-next
 ```
 
 Send an attempt or request a hint, reload to see the saved input, and choose **Retry reply**. The retry succeeds without adding another Learner turn. **End activity** clears the temporary conversation. Stop the preview service and web server with Ctrl-C. This demo uses your configured local application database; automated tests instead create and delete an isolated PostgreSQL cluster.
+
+
+## Read-only model access and allowance
+
+The authenticated **Model access** panel shows credential/funding/retention readiness, measured usage, pending reservations, unresolved usage, and remaining app allocation. It cannot change configuration. A Pro subscription alone never activates the adapter, and the app meter is not the provider's live credit balance.
+
+The direct text path uses `gpt-6.1-sol`, Standard tier, foreground Responses, `store:false`, explicit caching with no breakpoints, no tools and no automatic retries. It reserves a conservative **$3.718 per attempt** against the shared PostgreSQL allowance before any HTTP dispatch, then settles measured tokens (including reasoning). Small requests normally use much less; insufficient reservation headroom still blocks them. A disconnected or unverifiable response retains the full reservation. Retrying a failed action is a new metered attempt; completed/pending actions replay without another dispatch.
+
+Live access requires a server-side key, fresh verified subscription-grant evidence, account-level absence of purchased-credit/recharge/unapproved postpaid paths, and matching approved provider/application retention evidence. The default remains closed. No provider balance probe, credit purchase, limit change, fallback provider, or cloud resource is created by this code. Operator evidence fields, the extension boundary for future operations, and remaining activation checks are documented in [ticket 03 verification](docs/ticket-drafts/03-verification.md).

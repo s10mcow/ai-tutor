@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createServer } from "node:net";
 
+import { controlledOpenAI } from "./openai-provider";
 import { controlledTutor } from "./tutor-provider";
 
 const pgBin = process.env.TEST_PG_BIN ?? "/opt/homebrew/opt/postgresql@16/bin";
@@ -18,11 +19,25 @@ async function freePort() {
   return port;
 }
 export const test = base.extend<{
-  app: { url: string; restart: () => Promise<void> };
+  app: {
+    url: string;
+    restart: (settings?: Record<string, string>) => Promise<void>;
+  };
   tutor: Awaited<ReturnType<typeof controlledTutor>>;
+  openai: Awaited<ReturnType<typeof controlledOpenAI>>;
+  modelEnvironment: Record<string, string>;
   sessionRetentionSeconds: number;
   controlledTutorEnabled: boolean;
 }>({
+  modelEnvironment: [{}, { option: true }],
+  openai: async ({}, use) => {
+    const provider = await controlledOpenAI();
+    try {
+      await use(provider);
+    } finally {
+      await provider.close();
+    }
+  },
   sessionRetentionSeconds: [86400, { option: true }],
   controlledTutorEnabled: [true, { option: true }],
   tutor: async ({}, use) => {
@@ -35,7 +50,13 @@ export const test = base.extend<{
   },
   app: [
     async (
-      { tutor, sessionRetentionSeconds, controlledTutorEnabled },
+      {
+        tutor,
+        openai,
+        modelEnvironment,
+        sessionRetentionSeconds,
+        controlledTutorEnabled,
+      },
       use,
       testInfo,
     ) => {
@@ -56,9 +77,19 @@ export const test = base.extend<{
         FAMILY_SETUP_EMAILS: "parent@example.test,other@example.test",
         FAMILY_SETUP_CODE: "fictional-family-invite",
         NEXT_TELEMETRY_DISABLED: "1",
+        OPENAI_API_KEY: "",
+        TUTOR_FUNDING_EVIDENCE: "",
+        TUTOR_RETENTION_EVIDENCE: "",
+        TUTOR_OPENAI_FIXTURE_URL:
+          modelEnvironment.TUTOR_OPENAI_FIXTURE_URL === "fixture"
+            ? openai.url
+            : "",
+        ...modelEnvironment,
         TUTOR_PREVIEW_URL: controlledTutorEnabled ? tutor.url : "",
         TUTOR_SESSION_RETENTION_SECONDS: String(sessionRetentionSeconds),
       };
+      if (modelEnvironment.TUTOR_OPENAI_FIXTURE_URL === "fixture")
+        env.TUTOR_OPENAI_FIXTURE_URL = openai.url;
       async function stop() {
         if (
           processHandle?.pid &&
@@ -161,7 +192,8 @@ export const test = base.extend<{
         await start();
         await use({
           url,
-          restart: async () => {
+          restart: async (settings = {}) => {
+            Object.assign(env, settings);
             await stop();
             await start();
           },
