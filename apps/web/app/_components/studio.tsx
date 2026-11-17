@@ -3,6 +3,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { Learner } from "../../../../lib/family";
 
+import { Workspace } from "./workspace";
+
 type Family = { learners: Learner[]; selectedLearnerId: string | null };
 async function request<T>(
   url: string,
@@ -355,91 +357,6 @@ function LearnerPicker({
           computer.
         </p>
       </div>
-    </div>
-  );
-}
-
-function Workspace({
-  learner,
-  onSwitch,
-}: {
-  learner: Learner;
-  onSwitch: () => void;
-}) {
-  const [draft, setDraft] = useState("");
-  return (
-    <div className="workspace">
-      <aside className="workspace-nav">
-        <p className="eyebrow">YOUR SPACE</p>
-        <div className="identity">
-          <span aria-hidden="true">✳</span>
-          <strong>{learner.name}</strong>
-        </div>
-        <button className="text-button" onClick={onSwitch}>
-          Switch Learner <span aria-hidden="true">⇄</span>
-        </button>
-        <div className="nav-note">
-          <span aria-hidden="true">✦</span>
-          <p>You don’t have to know the answer to make a start.</p>
-        </div>
-      </aside>
-      <section className="workspace-main">
-        <p className="eyebrow">HELLO, CURIOUS MIND</p>
-        <h1>{learner.name}’s learning workspace</h1>
-        <p className="intro">
-          There’s room here for a question, a first try, and a change of mind.
-        </p>
-        <div className="work-columns">
-          <section className="work-pad">
-            <div className="panel-heading">
-              <span className="eyebrow">YOUR THINKING SPACE</span>
-              <span aria-hidden="true">↗</span>
-            </div>
-            <h2>What are you wondering?</h2>
-            <p>A place to jot a thought before you begin.</p>
-            <label className="sr-only" htmlFor="scratchpad">
-              My scratchpad
-            </label>
-            <textarea
-              id="scratchpad"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="I wonder why…"
-            />
-            <small>
-              This scratchpad is temporary. It clears when you leave this
-              workspace.
-            </small>
-          </section>
-          <section className="tutor-panel">
-            <span className="tutor-mark" aria-hidden="true">
-              ✳
-            </span>
-            <p className="eyebrow">MEET YOUR TUTOR</p>
-            <h2>Your ideas lead the way.</h2>
-            <p>
-              The Tutor will help you explore one small step at a time, try
-              things out, and explain your thinking.
-            </p>
-            <div className="status-note">
-              <span className="status-dot" />
-              Tutor access isn’t active in this preview.
-            </div>
-            <p className="small">
-              For now, explore your private workspace using fictional
-              information.
-            </p>
-          </section>
-        </div>
-        <div className="thinking-prompt">
-          <span>01</span>
-          <p>Ask a question.</p>
-          <span>02</span>
-          <p>Try an idea.</p>
-          <span>03</span>
-          <p>Explain your thinking.</p>
-        </div>
-      </section>
     </div>
   );
 }

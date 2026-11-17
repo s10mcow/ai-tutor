@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/with-env.mjs scripts/migrate.ts",
     "test:browser": "node scripts/test-browser.mjs",
-    "start:web": "node scripts/with-env.mjs node_modules/next/dist/bin/next start apps/web"
+    "start:web": "node scripts/with-env.mjs node_modules/next/dist/bin/next start apps/web",
+    "sessions:purge": "node scripts/with-env.mjs scripts/purge-sessions.ts",
+    "preview:tutor": "node scripts/preview-tutor.ts"
   },
   "dependencies": {
     "better-auth": "1.7.25",
