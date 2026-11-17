@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import type { TutorRequest } from "../lib/tutor-provider.ts";
+import { currentFreshChallenge } from "../lib/coaching-contract.ts";
 
 // A deliberately scripted external service for fictional demonstrations only.
 // It neither calls a model nor stores conversation content.
@@ -18,6 +19,18 @@ const replies = {
     "We can slow down. Start with a single pencil in each cup. Stop there and count how many pencils you have used.",
   independent:
     "Take your time trying independently. I’ll wait here. When you’re ready, share what you tried and how you checked it.",
+  alternative:
+    "Compare drawing six equal groups with subtracting six pencils again and again. What does each way help you notice?",
+  evidence:
+    "In this scripted practice, check whether your drawing uses all 24 pencils in six equal groups. What does your evidence support, and would you change your reason?",
+  challenge:
+    "It is okay to question the Tutor. This scripted preview cannot judge your evidence, but six groups of four total 24. If I claimed 30, that claim needs correcting. What does your check show?",
+  different:
+    "Try a drawing instead: make two spaces on paper and draw one dot in each. What would keep the spaces equal?",
+  easier:
+    "Let’s start with two counters and two spaces. Put one counter in each space, then stop. You can also take a break and return to your work.",
+  fresh:
+    "Share 15 buttons equally among 3 bags. How many in each, and how could you check? Try your own way first.",
 } satisfies Record<TutorRequest["actions"][number]["intent"], string>;
 const port = Number(process.env.TUTOR_PREVIEW_PORT ?? 4321);
 const server = createServer(async (request, response) => {
@@ -54,7 +67,24 @@ const server = createServer(async (request, response) => {
       failNext = false;
       return reply(503, { error: "Simulated Tutor service failure" });
     }
-    reply(200, { text: replies[intent] });
+    const lastText = context.actions.at(-1)?.text ?? "";
+    const confused =
+      /(?:don.t (?:get|understand|know)|still confused|not sure|confusing)/i.test(
+        lastText,
+      );
+    const earlierConfusion = context.actions
+      .slice(0, -1)
+      .some((action) =>
+        /(?:don.t (?:get|understand|know)|still confused|not sure|confusing)/i.test(
+          action.text,
+        ),
+      );
+    const text = confused
+      ? replies[earlierConfusion ? "easier" : "different"]
+      : intent === "attempt" && currentFreshChallenge(context.actions)
+        ? "Check your fresh challenge: does the number of bags times your buttons per bag use all 15? Explain how you know the groups are equal. This scripted preview does not judge understanding."
+        : replies[intent];
+    reply(200, { text });
   } catch {
     reply(400, { error: "Unreadable preview request" });
   }
