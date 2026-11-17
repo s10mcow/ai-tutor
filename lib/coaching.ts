@@ -1,4 +1,4 @@
-import { researchClaim } from "./sol-provider.ts";
+import { researchClaim, SolContextLimitError } from "./sol-provider.ts";
 import { sessionImages } from "./session-images.ts";
 import { randomUUID } from "node:crypto";
 import { database } from "./database.ts";
@@ -48,7 +48,7 @@ async function snapshot(row: SessionRow): Promise<LearningSession> {
   );
   const actions = (
     await database.query<CoachingAction>(
-      "SELECT id, intent, text, reply, research, status FROM learning_action WHERE session_id = $1 ORDER BY sequence",
+      'SELECT id, intent, text, reply, research, status, failure_reason AS "failureReason" FROM learning_action WHERE session_id = $1 ORDER BY sequence',
       [row.id],
     )
   ).rows;
@@ -220,10 +220,15 @@ export async function submitAction(
       );
     const actions = (
       await client.query<CoachingAction>(
-        "SELECT * FROM learning_action WHERE session_id = $1 ORDER BY sequence",
+        'SELECT *, failure_reason AS "failureReason" FROM learning_action WHERE session_id = $1 ORDER BY sequence',
         [sessionId],
       )
     ).rows;
+    if (actions.some((entry) => entry.failureReason === "context_limit"))
+      throw new AccessError(
+        409,
+        "Start a new activity to continue. You can save your work first.",
+      );
     const existing = actions.find((entry) => entry.id === action.id);
     if (
       existing &&
@@ -255,7 +260,7 @@ export async function submitAction(
         );
       if (existing) {
         await client.query(
-          "UPDATE learning_action SET status = 'pending', attempt_id = $3, started_at = now() WHERE session_id = $1 AND id = $2",
+          "UPDATE learning_action SET status = 'pending', failure_reason = NULL, attempt_id = $3, started_at = now() WHERE session_id = $1 AND id = $2",
           [sessionId, action.id, attemptId],
         );
       } else {
@@ -323,10 +328,15 @@ export async function submitAction(
       "UPDATE learning_action SET reply = $3, research = $5, status = 'complete' WHERE session_id = $1 AND id = $2 AND attempt_id = $4 AND status = 'pending'",
       [sessionId, action.id, reply, attemptId, research],
     );
-  } catch {
+  } catch (error) {
     await database.query(
-      "UPDATE learning_action SET status = 'failed' WHERE session_id = $1 AND id = $2 AND attempt_id = $3 AND status = 'pending'",
-      [sessionId, action.id, attemptId],
+      "UPDATE learning_action SET status = 'failed', failure_reason = $4 WHERE session_id = $1 AND id = $2 AND attempt_id = $3 AND status = 'pending'",
+      [
+        sessionId,
+        action.id,
+        attemptId,
+        error instanceof SolContextLimitError ? "context_limit" : null,
+      ],
     );
   }
   return readSession(access, learnerId, sessionId);

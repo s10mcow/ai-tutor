@@ -174,12 +174,35 @@ export async function interpretImage(
   await ownedImage(access, learnerId, sessionId, id);
   await sessionImages(sessionId);
   const attemptId = randomUUID();
-  const row = (
-    await database.query(
-      "UPDATE session_image SET status = 'pending', attempt_id = $3, started_at = now() WHERE session_id = $1 AND id = $2 AND status IN ('uploaded','failed') RETURNING *",
-      [sessionId, id, attemptId],
-    )
-  ).rows[0];
+  let row: { kind: string; bytes: Buffer } | undefined;
+  const client = await database.connect();
+  try {
+    await client.query("BEGIN");
+    const session = (
+      await client.query(
+        "SELECT break_state FROM learning_session WHERE id = $1 AND family_id = $2 AND learner_id = $3 AND expires_at > now() FOR UPDATE",
+        [sessionId, access.familyId, learnerId],
+      )
+    ).rows[0];
+    if (!session) throw new AccessError(404, "This activity has ended.");
+    if (session.break_state?.paused)
+      throw new AccessError(
+        409,
+        "Resume the activity before interpreting your picture.",
+      );
+    row = (
+      await client.query<{ kind: string; bytes: Buffer }>(
+        "UPDATE session_image SET status = 'pending', attempt_id = $3, started_at = now() WHERE session_id = $1 AND id = $2 AND status IN ('uploaded','failed') RETURNING kind, bytes",
+        [sessionId, id, attemptId],
+      )
+    ).rows[0];
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
   if (!row) return;
   try {
     const reply = await solResponse({

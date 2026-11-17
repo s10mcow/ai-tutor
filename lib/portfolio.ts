@@ -4,6 +4,7 @@ import { database } from "./database.ts";
 import { AccessError, requireLearner, type FamilyAccess } from "./family.ts";
 import {
   canSaveWrittenAction,
+  canSavePortfolioReflection,
   type PortfolioEntry,
   type PortfolioImage,
   type PortfolioSummary,
@@ -262,7 +263,7 @@ export async function editReflection(
   }
   if (!value.reflection.trim()) {
     const existing = await readPortfolioEntry(access, learnerId, entryId);
-    if (existing.images.length && !existing.evidence.length && !existing.audio)
+    if (!canSavePortfolioReflection(existing, value.reflection))
       throw new AccessError(
         400,
         "Keep your own explanation or reflection alongside your picture.",

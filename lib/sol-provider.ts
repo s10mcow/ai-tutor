@@ -53,6 +53,12 @@ type SolRequest = {
   input: unknown;
   instructions: string;
 };
+export class SolContextLimitError extends Error {
+  constructor() {
+    super("Start a new activity to continue");
+    this.name = "SolContextLimitError";
+  }
+}
 export function solResponse(
   request: SolRequest & { kind: "research" },
 ): Promise<ResearchResult>;
@@ -94,7 +100,7 @@ export async function solResponse(
   });
   // A byte ceiling is not a token estimate. Inline JPEG bytes are separately bounded.
   if (Buffer.byteLength(body) > (request.kind === "image" ? 4_100_000 : 64_000))
-    throw new Error("Start a new activity to continue");
+    throw new SolContextLimitError();
   const reply = await meteredOperation<string | ResearchResult | null>({
     attemptId: request.attemptId,
     kind: request.kind,
@@ -156,9 +162,8 @@ export async function solResponse(
         usage.input_tokens <= (research ? 1844000 : 922000) &&
         count(usage?.output_tokens) &&
         usage.output_tokens <= 2000 &&
-        (!research ||
-          (count(usage?.total_tokens) &&
-            usage.total_tokens === usage.input_tokens + usage.output_tokens)) &&
+        count(usage?.total_tokens) &&
+        usage.total_tokens === usage.input_tokens + usage.output_tokens &&
         details?.cached_tokens === 0 &&
         details?.cache_write_tokens === 0 &&
         details?.cache_write_tokens_details?.ttl_30m_tokens === 0 &&

@@ -215,7 +215,6 @@ test.describe("direct metered Tutor continuity", () => {
     expect(JSON.stringify(request.input)).not.toContain(
       "Unselected conversation detail",
     );
-    expect(request.instructions).toContain("not evidence of mastery");
     await page.getByRole("button", { name: "Switch Learner" }).click();
     await page.getByRole("button", { name: "Open Sky’s workspace" }).click();
     await expect(

@@ -614,6 +614,31 @@ test("a deliberately kept spoken reflection accompanies a picture while ordinary
     page.getByRole("img", { name: "Saved art picture" }),
   ).toBeVisible();
   await expect(page.getByLabel("Saved spoken reflection")).toBeVisible();
+  await page.getByRole("button", { name: "Edit my reflection" }).click();
+  await page
+    .getByLabel("My reflection", { exact: true })
+    .fill("I also wrote a note about my colours.");
+  await page
+    .getByRole("button", { name: "Save reflection", exact: true })
+    .click();
+  await expect(
+    page.getByText("I also wrote a note about my colours.", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Edit my reflection" }).click();
+  await page.getByLabel("My reflection", { exact: true }).fill("");
+  await expect(
+    page.getByRole("button", { name: "Save reflection", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Save reflection", exact: true })
+    .click();
+  await expect(
+    page.getByText("I kept my reflection in my recording.", { exact: true }),
+  ).toBeVisible();
+  const updated = (await (await page.request.get(entryPath)).json()).entry;
+  expect(updated.reflection).toBe("");
+  expect(updated.audio).toEqual(entry.audio);
+  expect(updated.images).toEqual(entry.images);
   expect((await page.request.get(`${entryPath}/audio`)).status()).toBe(200);
   expect(openai.requests).toHaveLength(2);
 });

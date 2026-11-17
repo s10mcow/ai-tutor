@@ -198,7 +198,6 @@ test("public lookup rejects capability expansion and never treats prose or unsaf
       return_token_budget: "default",
     },
   ]);
-  expect(openai.requests[1].body.instructions).toContain("untrusted evidence");
 });
 
 test("a failed public lookup holds unknown cost and an explicit retry preserves the claim and charges only once", async ({

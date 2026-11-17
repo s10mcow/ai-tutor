@@ -63,6 +63,7 @@ export function CoachingSession({
   const url = `/api/learners/${learner.id}/session`;
   const lastAction = session?.actions.at(-1);
   const failed = lastAction?.status === "failed" ? lastAction : null;
+  const contextLimit = failed?.failureReason === "context_limit";
   const waiting = lastAction?.status === "pending";
   const paused = !!session?.breakState?.paused;
   const imageUnconfirmed = !!session?.images.some(
@@ -337,15 +338,7 @@ export function CoachingSession({
           <SessionPicture
             key={`picture-${session.id}`}
             session={session}
-            disabled={
-              busy ||
-              ending ||
-              changingBreak ||
-              paused ||
-              waiting ||
-              !!failed ||
-              !!unsent
-            }
+            disabled={busy || ending || changingBreak || paused || waiting}
             onChange={receive}
           />
         )}
@@ -463,18 +456,28 @@ export function CoachingSession({
             )}
             {failed && (
               <p role="alert" className="error">
-                {failed.intent === "research"
-                  ? "Public lookup failed. No source was verified by this lookup."
-                  : "The Tutor couldn’t reply."}{" "}
-                This is a service problem, not a mark on your answer. Your input
-                is saved. A retry may use more allowance; unresolved provider
-                usage stays held. Check Model access for details.
+                {contextLimit ? (
+                  <>
+                    This activity is full. Your work is still here. Save what
+                    you want to keep, then end this activity. Start a new
+                    activity to continue.
+                  </>
+                ) : (
+                  <>
+                    {failed.intent === "research"
+                      ? "Public lookup failed. No source was verified by this lookup."
+                      : "The Tutor couldn’t reply."}{" "}
+                    This is a service problem, not a mark on your answer. Your
+                    input is saved. A retry may use more allowance; unresolved
+                    provider usage stays held. Check Model access for details.
+                  </>
+                )}
               </p>
             )}
-            {(failed || unsent) && (
+            {!contextLimit && (failed || unsent) && (
               <button
                 className="primary"
-                disabled={busy || waiting}
+                disabled={busy || waiting || imageUnconfirmed}
                 onClick={() => {
                   const retry = failed ?? unsent;
                   if (retry)

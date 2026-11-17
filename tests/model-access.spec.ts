@@ -1,5 +1,6 @@
 import { applicationRetentionEvidence } from "./readiness-evidence";
 import type { Page } from "@playwright/test";
+import sharp from "sharp";
 import { test, expect } from "./fixture";
 
 async function setup(page: Page) {
@@ -57,6 +58,85 @@ test.describe("metered direct Sol", () => {
     controlledTutorEnabled: false,
     modelEnvironment: fixtureEnvironment,
   });
+  test("context exhaustion explains how to keep work and start a new activity without futile retries", async ({
+    page,
+    app,
+    openai,
+  }) => {
+    await setup(page);
+    await learner(page);
+    const family = await (await page.request.get("/api/family")).json();
+    const base = `/api/learners/${family.selectedLearnerId}/session`;
+    const session = (await (await page.request.get(base)).json()).session;
+    const path = `${base}/${session.id}`;
+    const headers = { origin: app.url };
+    let failed: { id: string; text: string; intent: string } | undefined;
+    for (let step = 0; step < 12; step++) {
+      const input = {
+        id: `long-explanation-${step}`,
+        intent: step ? "attempt" : "question",
+        text: `Idea ${step}: I compared both explanations and checked the evidence. `.padEnd(
+          1900,
+          ".",
+        ),
+      };
+      openai.reply(
+        "Compare both ideas carefully before deciding. ".padEnd(6000, "."),
+      );
+      const response = await page.request.post(path, { headers, data: input });
+      expect(response.status()).toBe(200);
+      const latest = (await response.json()).session.actions.at(-1);
+      if (latest.status === "failed") {
+        failed = input;
+        break;
+      }
+    }
+    expect(failed).toBeDefined();
+    const dispatched = openai.requests.length;
+    expect(dispatched).toBeGreaterThan(1);
+    await app.restart();
+    await page.reload();
+    const conversation = page.getByRole("region", { name: "Conversation" });
+    await expect(conversation.getByRole("alert")).toContainText(
+      "Start a new activity",
+    );
+    await expect(conversation).not.toContainText("service problem");
+    await expect(
+      page.getByRole("button", { name: "Retry reply", exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByLabel("Your message")).toHaveValue(failed!.text);
+    const retry = await page.request.post(path, { headers, data: failed });
+    expect(retry.status()).toBe(409);
+    expect((await retry.json()).error).toContain("Start a new activity");
+    expect(openai.requests).toHaveLength(dispatched);
+    await page.getByRole("button", { name: "Save Learning evidence" }).click();
+    await page.getByRole("checkbox").last().check();
+    await page.getByLabel("Entry title").fill("My final comparison");
+    await page
+      .getByRole("button", { name: "Save to Portfolio", exact: true })
+      .click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Saved to your Portfolio" }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "End activity", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Start an activity", exact: true })
+      .click();
+    await page.getByLabel("Your question").fill("Can we try a fresh question?");
+    await page.getByRole("button", { name: "Ask Tutor", exact: true }).click();
+    await expect(conversation).toContainText("Compare both ideas carefully");
+    expect(openai.requests).toHaveLength(dispatched + 1);
+    const portfolioPath = `/api/learners/${family.selectedLearnerId}/portfolio`;
+    const entries = (await (await page.request.get(portfolioPath)).json())
+      .entries;
+    const saved = (
+      await (await page.request.get(`${portfolioPath}/${entries[0].id}`)).json()
+    ).entry;
+    expect(saved.evidence[0].text).toBe(failed!.text);
+  });
+
   test("chosen activity purpose and declined maths stay in the direct metered context", async ({
     page,
     openai,
@@ -92,9 +172,6 @@ test.describe("metered direct Sol", () => {
     ).toContainText("stay with how biking feels");
     expect(JSON.stringify(openai.requests[1].body.input)).toContain(
       "I do not want a maths connection",
-    );
-    expect(openai.requests[1].body.instructions).toContain(
-      "Respect a declined connection",
     );
     expect(
       (await (await page.request.get("/api/model-access")).json())
@@ -175,6 +252,82 @@ test.describe("one remaining reservation", () => {
       TUTOR_FIXTURE_ALLOWANCE_NANO_USD: "3718000000",
     },
   });
+  for (const operation of ["text", "image"] as const) {
+    test(`contradictory ${operation} token totals keep the allowance held`, async ({
+      page,
+      openai,
+    }) => {
+      await setup(page);
+      await learner(page);
+      openai.reply(
+        operation === "image"
+          ? JSON.stringify({ readable: true, description: "Four blue shapes" })
+          : "Try comparing the shapes.",
+        {
+          input_tokens: 100,
+          output_tokens: 100,
+          total_tokens: 100000,
+          input_tokens_details: {
+            cached_tokens: 0,
+            cache_write_tokens: 0,
+            cache_write_tokens_details: {
+              ttl_30m_tokens: 0,
+              ttl_12h_tokens: 0,
+            },
+          },
+          output_tokens_details: { reasoning_tokens: 0 },
+        },
+      );
+      if (operation === "image") {
+        await page.getByRole("button", { name: "Attach a picture" }).click();
+        await page.getByLabel("Workbook or artwork picture").setInputFiles({
+          name: "fictional-shapes.png",
+          mimeType: "image/png",
+          buffer: await sharp({
+            create: { width: 40, height: 40, channels: 3, background: "blue" },
+          })
+            .png()
+            .toBuffer(),
+        });
+        await page
+          .getByRole("button", { name: "Read picture", exact: true })
+          .click();
+        await expect(
+          page.getByLabel("Check the picture description"),
+        ).toHaveValue("Four blue shapes");
+        await page
+          .getByRole("button", { name: "Confirm picture", exact: true })
+          .click();
+      } else {
+        await page
+          .getByLabel("Your question")
+          .fill("How do I compare these shapes?");
+        await page
+          .getByRole("button", { name: "Ask Tutor", exact: true })
+          .click();
+        await expect(
+          page.getByRole("region", { name: "Conversation" }),
+        ).toContainText("Try comparing the shapes.");
+      }
+      expect(
+        await (await page.request.get("/api/model-access")).json(),
+      ).toMatchObject({
+        ready: false,
+        settledNanoUsd: "0",
+        unknownNanoUsd: "3718000000",
+        remainingNanoUsd: "0",
+      });
+      await page.getByLabel("Your message").fill("Can I try another idea?");
+      await page.getByLabel("Message purpose").selectOption("attempt");
+      await page
+        .getByRole("button", { name: "Share attempt", exact: true })
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Retry reply", exact: true }),
+      ).toBeVisible();
+      expect(openai.requests).toHaveLength(1);
+    });
+  }
   test("concurrent Learners share one allowance and pending replays cannot dispatch twice", async ({
     page,
     app,

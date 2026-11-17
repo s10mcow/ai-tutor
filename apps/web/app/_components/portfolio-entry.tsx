@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { PortfolioEntry } from "../../../../lib/portfolio-contract";
+import {
+  canSavePortfolioReflection,
+  type PortfolioEntry,
+} from "../../../../lib/portfolio-contract";
 import { portfolioRequest } from "./portfolio-request";
 
 export function PortfolioEntryView({
@@ -133,12 +136,7 @@ export function PortfolioEntryView({
           <div className="portfolio-entry-actions">
             <button
               className="primary"
-              disabled={
-                busy ||
-                (!!saved.images.length &&
-                  !saved.evidence.length &&
-                  !reflection.trim())
-              }
+              disabled={busy || !canSavePortfolioReflection(saved, reflection)}
             >
               {busy ? "Saving…" : "Save reflection"}
             </button>

@@ -28,6 +28,7 @@ export type CoachingAction = {
   reply: string | null;
   research?: ResearchResult | null;
   status: "pending" | "complete" | "failed";
+  failureReason?: "context_limit" | null;
 };
 export type LearningSession = {
   id: string;

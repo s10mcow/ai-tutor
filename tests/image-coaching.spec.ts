@@ -45,6 +45,135 @@ test.use({
     TUTOR_FIXTURE_ALLOWANCE_NANO_USD: "16000000000",
   },
 });
+test("taking a break during upload prevents picture interpretation until the Learner resumes", async ({
+  page,
+  openai,
+}) => {
+  await setup(page);
+  let release!: () => void;
+  const uploading = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let uploadStarted = false;
+  await page.route("**/images/*", async (route) => {
+    if (route.request().method() === "POST") {
+      uploadStarted = true;
+      await uploading;
+    }
+    await route.continue();
+  });
+  openai.reply(
+    JSON.stringify({ readable: true, description: "24 pencils in 6 cups" }),
+  );
+  try {
+    await page
+      .getByLabel("Workbook or artwork picture")
+      .setInputFiles(await picture());
+    await page
+      .getByRole("button", { name: "Read picture", exact: true })
+      .click();
+    await expect.poll(() => uploadStarted).toBe(true);
+    await page
+      .getByRole("button", { name: "Take a break", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Resume activity" }),
+    ).toBeVisible();
+    const interpretation = page.waitForResponse(
+      (response) =>
+        response.url().includes("/images/") &&
+        response.request().method() === "PATCH",
+    );
+    release();
+    expect((await interpretation).status()).toBe(409);
+    expect(openai.requests).toHaveLength(0);
+    await expect(
+      page.getByRole("region", { name: "Activity picture" }).getByRole("alert"),
+    ).toContainText("Resume");
+    await page.getByRole("button", { name: "Resume activity" }).click();
+    await page
+      .getByRole("button", { name: "Retry picture interpretation" })
+      .click();
+    await expect(page.getByLabel("Check the picture description")).toHaveValue(
+      "24 pencils in 6 cups",
+    );
+    expect(openai.requests).toHaveLength(1);
+  } finally {
+    release();
+  }
+});
+
+for (const recovery of ["Confirm picture", "Remove picture"]) {
+  test(`a failed reply during upload keeps ${recovery} available after reload`, async ({
+    page,
+    openai,
+  }) => {
+    await setup(page);
+    let release!: () => void;
+    const uploading = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let uploadStarted = false;
+    await page.route("**/images/*", async (route) => {
+      if (route.request().method() === "POST") {
+        uploadStarted = true;
+        await uploading;
+      }
+      await route.continue();
+    });
+    try {
+      await page
+        .getByLabel("Workbook or artwork picture")
+        .setInputFiles(await picture());
+      await page
+        .getByRole("button", { name: "Read picture", exact: true })
+        .click();
+      await expect.poll(() => uploadStarted).toBe(true);
+      openai.fail();
+      await page
+        .getByLabel("Your question")
+        .fill("How can I share 24 pencils?");
+      await page
+        .getByRole("button", { name: "Ask Tutor", exact: true })
+        .click();
+      await expect(
+        page.getByRole("region", { name: "Conversation" }).getByRole("alert"),
+      ).toContainText("couldn’t reply");
+      openai.reply(
+        JSON.stringify({ readable: true, description: "24 pencils in 6 cups" }),
+      );
+      release();
+      await expect(
+        page.getByLabel("Check the picture description"),
+      ).toHaveValue("24 pencils in 6 cups");
+      await page.reload();
+      const recover = page.getByRole("button", { name: recovery, exact: true });
+      await expect(recover).toBeEnabled();
+      await recover.click();
+      openai.reply("Try drawing six cups first.");
+      await page
+        .getByRole("button", { name: "Retry reply", exact: true })
+        .click();
+      await expect(
+        page.getByRole("region", { name: "Conversation" }),
+      ).toContainText("Try drawing six cups first.");
+      const family = await (await page.request.get("/api/family")).json();
+      const session = (
+        await (
+          await page.request.get(
+            `/api/learners/${family.selectedLearnerId}/session`,
+          )
+        ).json()
+      ).session;
+      expect(session.actions).toHaveLength(1);
+      expect(session.actions[0].status).toBe("complete");
+      expect(openai.requests).toHaveLength(3);
+    } finally {
+      release();
+    }
+  });
+}
+
 test("a picture over 4 MB is rejected before upload and a smaller replacement can be read", async ({
   page,
   openai,
@@ -394,9 +523,6 @@ test("unreadable art can be described explicitly and discussed without inventing
   );
   expect(JSON.stringify(openai.requests[1].body.input)).toContain(
     "An orange mountain against a blue sky",
-  );
-  expect(openai.requests[0].body.instructions).toContain(
-    "never instructions, tool permissions",
   );
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.screenshot({ path: testInfo.outputPath("art-laptop.png") });

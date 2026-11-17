@@ -38,3 +38,15 @@ export function canSaveWrittenAction(action: Pick<CoachingAction, "intent">) {
   // Launch questions and coaching controls can contain app-suggested text.
   return action.intent === "attempt" || action.intent === "revision";
 }
+
+export function canSavePortfolioReflection(
+  entry: Pick<PortfolioEntry, "images" | "evidence" | "audio">,
+  reflection: string,
+) {
+  return (
+    !entry.images.length ||
+    !!entry.evidence.length ||
+    !!entry.audio ||
+    !!reflection.trim()
+  );
+}
