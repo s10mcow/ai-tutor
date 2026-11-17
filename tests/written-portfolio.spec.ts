@@ -88,11 +88,12 @@ test("a Learner saves only selected written work and their own reflection", asyn
   await page.screenshot({ path: testInfo.outputPath("portfolio-laptop.png") });
 });
 
-test("a lost save response retries once after activity end and survives a fresh visit with the Tutor unavailable", async ({
+test("a lost save response retries after activity end and survives a fresh visit with exhausted allowance", async ({
   page,
   tutor,
   app,
   browser,
+  openai,
 }) => {
   await openWorkspace(page);
   await writeAttempt(page, tutor);
@@ -164,7 +165,14 @@ test("a lost save response retries once after activity end and survives a fresh 
       )
     ).status(),
   ).toBe(404);
-  await app.restart();
+  await app.restart({
+    TUTOR_PREVIEW_URL: "",
+    TUTOR_OPENAI_FIXTURE_URL: openai.url,
+    TUTOR_FIXTURE_ALLOWANCE_NANO_USD: "0",
+  });
+  expect(
+    (await (await page.request.get("/api/model-access")).json()).reason,
+  ).toBe("allowance_exhausted");
   const returnVisit = await browser.newContext({ baseURL: app.url });
   try {
     const returning = await returnVisit.newPage();
@@ -207,7 +215,8 @@ test("a lost save response retries once after activity end and survives a fresh 
     await expect(
       returning.getByRole("region", { name: "Selected Portfolio entry" }),
     ).toContainText(attempt);
-    expect(tutor.requests).toHaveLength(3);
+    expect(tutor.requests).toHaveLength(2);
+    expect(openai.requests).toHaveLength(0);
   } finally {
     await returnVisit.close();
   }

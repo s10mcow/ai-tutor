@@ -27,10 +27,18 @@ Components are separated into `SaveEvidence`, `Portfolio`, `PortfolioEntryView` 
 
 ## Verification and limits
 
-The accepted Playwright boundary uses real Better Auth, HTTP routes and an isolated PostgreSQL cluster. Only the external Tutor HTTP service and deliberately lost/delayed browser responses are controlled. The written-selection, unconfirmed-save retry, reflection/show-parent and suggested-question exclusion behaviors were each observed failing before implementation. Further scenarios exercise authorization, concurrent first saves, profile switching during a committed-but-unconfirmed save, and source expiry while the provider cannot reply.
+The accepted Playwright boundary uses real Better Auth, HTTP routes and an isolated PostgreSQL cluster. Only the external Tutor HTTP service and deliberately lost/delayed browser responses are controlled. The written-selection, unconfirmed-save retry, reflection/show-parent and suggested-question exclusion behaviors were each observed failing before implementation. Further scenarios exercise authorization, concurrent first saves, profile switching during a committed-but-unconfirmed save, source expiry while the provider cannot reply, and readable saved evidence with the integrated allowance gate exhausted.
 
 The 1366×768 selection, entry and show-parent screenshots were inspected. The chooser contains visible selection, reflection and save controls; the parent view contains one readable entry, not the chat or every saved entry. React guidance was checked for component boundaries, request cleanup, narrow effect dependencies, form labels, the native modal dialog, browser-safe imports and reduced list payloads.
 
 This is local fictional-data evidence. Hosted availability, backup retention, provider credit/allowance readiness and under-13 handling remain activation requirements owned by the coordinating tickets. Database-backed reading remains possible without a model provider; this does not claim offline access without the application/database. Saved image and audio evidence are later slices. Closing the save dialog discards its transient draft; an unconfirmed save can be checked in My Portfolio. No raw transcript archive or new cloud resource was created.
 
-Local verification before integration: the six Portfolio scenarios passed; after narrowing authorship to Share attempt, the selected-work, direct-ownership and failed-provider/expiry scenarios passed again. TypeScript checking passed. Final integration and build results are recorded below.
+Final checks used Node 26.13.1:
+
+- `npm run test:browser -- tests/written-portfolio.spec.ts`: six passed after merging activity discovery, and six passed again after merging metered model access at integration commit `40eeff4`. The fresh-visit scenario sets the controlled provider allocation to zero, confirms `allowance_exhausted`, verifies a blocked Tutor reply, and still opens the saved entry with zero direct-provider requests.
+- `npm run test:browser -- tests/activity-discovery.spec.ts tests/family-workspace.spec.ts tests/text-coaching.spec.ts -g 'Learners can replace suggestions|switching Learners clears|a Learner starts a typed activity'`: three relevant regressions passed after the activity merge.
+- `npm run typecheck`: passed after both integration merges.
+- `npm run build`: Next.js and eve passed after the activity merge. `npm run build:web` passed again after the model-access merge; eve behavior was unchanged by that merge. Both used explicit fictional auth configuration.
+- Formatting and `git diff --check`: passed for the changed source.
+
+The current laptop artifacts are retained outside the repo at `/tmp/ai-tutor-research/ticket10/`: `evidence-selection-laptop.png`, `portfolio-laptop.png`, and `show-parent-laptop.png`. The full repository test suite was not run.
