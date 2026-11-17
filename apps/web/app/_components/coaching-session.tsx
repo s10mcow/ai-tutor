@@ -60,7 +60,7 @@ export function CoachingSession({
   const failed = lastAction?.status === "failed" ? lastAction : null;
   const waiting = lastAction?.status === "pending";
   const paused = !!session?.breakState?.paused;
-  const imageUnconfirmed = session?.images.some(
+  const imageUnconfirmed = !!session?.images.some(
     (image) => image.status !== "confirmed",
   );
   const blocked =
