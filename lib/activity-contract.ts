@@ -1,5 +1,12 @@
 export const activityChoices = [
   {
+    kind: "maths-game",
+    title: "Short maths game",
+    purpose:
+      "Pack two tile deliveries into equal groups. Choose a starting size, try an idea, and explain how you checked it.",
+    starter: "Shall we explore equal sharing with smaller or bigger numbers?",
+  },
+  {
     kind: "biking",
     title: "Biking exploration",
     purpose:
