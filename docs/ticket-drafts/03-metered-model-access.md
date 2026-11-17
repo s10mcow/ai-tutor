@@ -8,15 +8,15 @@
 
 **Source stories:** 57, 58, 59, 60, 61, 62.
 
-- [ ] The parent-facing setup state distinguishes missing credentials, unverified funding, exhausted allowance, and available access; it never reports activation merely because a Pro plan exists.
-- [ ] The hosted provider integration targets `gpt-6.1-sol` and keeps credentials server-side. No silent substitute model or local parent-computer dependency is introduced.
-- [ ] A session response and its measured usage travel through the same application boundary as the controlled-provider session.
-- [ ] Chargeable requests require an established allowance and reserve sufficient allowance before dispatch. Concurrent calls and retries cannot independently spend the same remaining allocation.
-- [ ] Report usage honestly and reconcile reservations after outcomes. Define how the budget accounts for subscription credits used elsewhere; a display-only budget or assumed untouched $200 balance is insufficient.
-- [ ] All future chargeable provider operations can use the same allowance enforcement. This slice implements and tests the text-model path; subsequent slices add their own operation costs.
-- [ ] A provider failure, missing entitlement, or exhausted allowance preserves the current work and readable application state. No auto-recharge, purchased-credit fallback, or extra paid service is enabled by this ticket.
-- [ ] Live-family eligibility is closed until the required account and retention evidence is verified. A parent-facing readiness display distinguishes code configuration from approved live-family access.
-- [ ] Browser scenarios with controlled provider responses verify success, rejection before dispatch, concurrent exhaustion, retries, and recoverable failure. They require no purchase or transmission of child data.
+- [x] The parent-facing setup state distinguishes missing credentials, unverified funding, exhausted allowance, and available access; it never reports activation merely because a Pro plan exists.
+- [x] The hosted provider integration targets `gpt-6.1-sol` and keeps credentials server-side. No silent substitute model or local parent-computer dependency is introduced.
+- [x] A session response and its measured usage travel through the same application boundary as the controlled-provider session.
+- [x] Chargeable requests require an established allowance and reserve sufficient allowance before dispatch. Concurrent calls and retries cannot independently spend the same remaining allocation.
+- [x] Report usage honestly and reconcile reservations after outcomes. Define how the budget accounts for subscription credits used elsewhere; a display-only budget or assumed untouched $200 balance is insufficient.
+- [x] All future chargeable provider operations can use the same allowance enforcement. This slice implements and tests the text-model path; subsequent slices add their own operation costs.
+- [x] A provider failure, missing entitlement, or exhausted allowance preserves the current work and readable application state. No auto-recharge, purchased-credit fallback, or extra paid service is enabled by this ticket.
+- [x] Live-family eligibility is closed until the required account and retention evidence is verified. A parent-facing readiness display distinguishes code configuration from approved live-family access.
+- [x] Browser scenarios with controlled provider responses verify success, rejection before dispatch, concurrent exhaustion, retries, and recoverable failure. They require no purchase or transmission of child data.
 
 **Demo:** Run a fictional session against a controlled provider, observe the usage update, then exhaust the configured allowance and demonstrate that another chargeable call is prevented.
 
