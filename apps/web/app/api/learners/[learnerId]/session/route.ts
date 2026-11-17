@@ -23,6 +23,7 @@ export async function POST(request: Request, { params }: Context) {
       session: await startSession(
         await requireFamily(request),
         (await params).learnerId,
+        await request.json(),
       ),
     };
   });
