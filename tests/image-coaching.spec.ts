@@ -45,6 +45,145 @@ test.use({
     TUTOR_FIXTURE_ALLOWANCE_NANO_USD: "16000000000",
   },
 });
+test("a picture over 4 MB is rejected before upload and a smaller replacement can be read", async ({
+  page,
+  openai,
+}) => {
+  await setup(page);
+  const large = await sharp({
+    create: { width: 1200, height: 1200, channels: 3, background: "white" },
+  })
+    .png({ compressionLevel: 0 })
+    .toBuffer();
+  expect(large.length).toBeGreaterThan(4_000_000);
+  expect(large.length).toBeLessThan(4_500_000);
+  const uploads: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().includes("/images/"))
+      uploads.push(request.url());
+  });
+  await page.getByLabel("Workbook or artwork picture").setInputFiles({
+    name: "large-workbook.png",
+    mimeType: "image/png",
+    buffer: large,
+  });
+  await page.getByRole("button", { name: "Read picture", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Activity picture" }).getByRole("alert"),
+  ).toContainText("4 MB");
+  expect(uploads).toHaveLength(0);
+  expect(openai.requests).toHaveLength(0);
+  openai.reply(
+    JSON.stringify({ readable: true, description: "24 pencils in 6 cups" }),
+  );
+  await page
+    .getByLabel("Workbook or artwork picture")
+    .setInputFiles(await picture());
+  await page.getByRole("button", { name: "Read picture", exact: true }).click();
+  await expect(page.getByLabel("Check the picture description")).toHaveValue(
+    "24 pencils in 6 cups",
+  );
+  expect(uploads).toHaveLength(1);
+});
+
+test("direct picture uploads enforce the 4 MB limit before normalization", async ({
+  page,
+  app,
+  openai,
+}) => {
+  await setup(page);
+  const family = await (await page.request.get("/api/family")).json();
+  const base = `/api/learners/${family.selectedLearnerId}/session`;
+  const session = (await (await page.request.get(base)).json()).session;
+  const path = `${base}/${session.id}/images/size-boundary`;
+  const large = await sharp({
+    create: { width: 1200, height: 1200, channels: 3, background: "white" },
+  })
+    .png({ compressionLevel: 0 })
+    .toBuffer();
+  const headers = {
+    origin: app.url,
+    "content-type": "image/png",
+    "x-picture-kind": "workbook",
+  };
+  const rejected = await page.request.post(path, { headers, data: large });
+  expect(rejected.status()).toBe(413);
+  expect((await rejected.json()).error).toContain("4 MB");
+  expect((await (await page.request.get(base)).json()).session.images).toEqual(
+    [],
+  );
+  expect(openai.requests).toHaveLength(0);
+  const smaller = await picture();
+  expect(
+    (await page.request.post(path, { headers, data: smaller.buffer })).status(),
+  ).toBe(200);
+  expect(
+    (await page.request.post(path, { headers, data: smaller.buffer })).status(),
+  ).toBe(200);
+  const asset = await page.request.get(path);
+  expect((await sharp(await asset.body()).metadata()).format).toBe("jpeg");
+  expect(
+    (await (await page.request.get(base)).json()).session.images,
+  ).toHaveLength(1);
+});
+
+for (const status of [413, 502]) {
+  test(`a non-JSON picture ${status} gives useful recovery and a retry keeps one picture`, async ({
+    page,
+    openai,
+  }) => {
+    await setup(page);
+    await page.route(
+      "**/images/*",
+      async (route) => {
+        if (route.request().method() !== "POST") return route.continue();
+        // A platform 413 never reaches the app. A lost upstream response may
+        // happen after a successful save, so retry the real committed upload.
+        if (status === 502) expect((await route.fetch()).status()).toBe(200);
+        await route.fulfill({
+          status,
+          contentType: "text/plain",
+          body: status === 413 ? "FUNCTION_PAYLOAD_TOO_LARGE" : "Bad Gateway",
+        });
+      },
+      { times: 1 },
+    );
+    await page
+      .getByLabel("Workbook or artwork picture")
+      .setInputFiles(await picture());
+    await page
+      .getByRole("button", { name: "Read picture", exact: true })
+      .click();
+    const error = page
+      .getByRole("region", { name: "Activity picture" })
+      .getByRole("alert");
+    await expect(error).toContainText(status === 413 ? "4 MB" : "Try again");
+    await expect(
+      page.getByRole("button", { name: "Read picture", exact: true }),
+    ).toBeEnabled();
+    expect(openai.requests).toHaveLength(0);
+    openai.reply(
+      JSON.stringify({ readable: true, description: "24 pencils in 6 cups" }),
+    );
+    await page
+      .getByRole("button", { name: "Read picture", exact: true })
+      .click();
+    await expect(page.getByLabel("Check the picture description")).toHaveValue(
+      "24 pencils in 6 cups",
+    );
+    const family = await (await page.request.get("/api/family")).json();
+    const session = (
+      await (
+        await page.request.get(
+          `/api/learners/${family.selectedLearnerId}/session`,
+        )
+      ).json()
+    ).session;
+    expect(session.images).toHaveLength(1);
+    expect(openai.requests).toHaveLength(1);
+  });
+}
+
 test("a workbook interpretation must be corrected and confirmed before coaching in the same activity", async ({
   page,
   openai,

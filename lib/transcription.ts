@@ -1,3 +1,4 @@
+import { readBoundedBody } from "./bounded-body.ts";
 import { validateRecording } from "./audio-recording.ts";
 import { createHash } from "node:crypto";
 import { AccessError, selectedLearnerId, type FamilyAccess } from "./family.ts";
@@ -16,25 +17,10 @@ export async function boundedRecording(request: Request) {
       415,
       "This recording format is unavailable. You can still type.",
     );
-  const reader = request.body?.getReader();
-  if (!reader) throw new AccessError(400, "No recording was received.");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.length;
-      if (size > audioMaximumBytes) {
-        await reader.cancel();
-        throw new AccessError(413, "Record no more than 60 seconds at a time.");
-      }
-      chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  const bytes = Buffer.concat(chunks);
+  const bytes = await readBoundedBody(request, audioMaximumBytes, {
+    missing: new AccessError(400, "No recording was received."),
+    tooLarge: new AccessError(413, "Record no more than 60 seconds at a time."),
+  });
   const durationSeconds = validateRecording(bytes);
   return { bytes, durationSeconds };
 }

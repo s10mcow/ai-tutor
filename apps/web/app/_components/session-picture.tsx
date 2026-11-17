@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { LearningSession } from "../../../../lib/coaching-contract";
+import {
+  imageMaximumBytes,
+  imageMaximumSize,
+  imageUploadSizeError,
+} from "../../../../lib/image-contract";
 
 export function SessionPicture({
   session,
@@ -46,17 +51,25 @@ export function SessionPicture({
     body?: BodyInit,
     headers?: HeadersInit,
   ) {
+    const retryMessage =
+      "The picture could not be reached. Try again, or choose another picture.";
     const response = await fetch(`${base}/${id}`, {
       method,
       body,
       headers,
       signal: lifetime.current!.signal,
+    }).catch(() => {
+      throw new Error(retryMessage);
     });
-    const data = await response.json();
+    if (response.status === 413) throw new Error(imageUploadSizeError);
+    const data = await response.json().catch(() => {
+      throw new Error(retryMessage);
+    });
     if (!response.ok)
       throw new Error(
-        data.error ?? "The picture could not be reached. Try again.",
+        typeof data?.error === "string" ? data.error : retryMessage,
       );
+    if (!data?.session) throw new Error(retryMessage);
     if (!lifetime.current!.signal.aborted) onChange(data.session);
     return data.session as LearningSession;
   }
@@ -147,15 +160,16 @@ export function SessionPicture({
             }}
           />
           <small>
-            Still JPEG, PNG or WebP; up to 5 MB and 16 million pixels.
+            Still JPEG, PNG or WebP; up to {imageMaximumSize} and 16 million
+            pixels.
           </small>
           <button
             disabled={locked || !file}
             onClick={() =>
               void run(async () => {
                 if (!file) return;
-                if (file.size > 5_000_000)
-                  throw new Error("Choose a picture smaller than 5 MB.");
+                if (file.size > imageMaximumBytes)
+                  throw new Error(imageUploadSizeError);
                 await request(uploadId, "POST", file, {
                   "Content-Type": file.type,
                   "X-Picture-Kind": kind,

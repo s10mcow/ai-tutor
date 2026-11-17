@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Learner } from "../../../../lib/family";
 import type {
   PilotReadiness,
@@ -46,11 +46,13 @@ export function Studio() {
   const [family, setFamily] = useState<Family | null>(null);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [selected, setSelected] = useState<Learner | null>(null);
   const [error, setError] = useState("");
   const [readiness, setReadiness] = useState<PilotReadiness | null>(null);
+  const familyLoad = useRef<AbortController | null>(null);
   useEffect(() => {
-    if (!family) {
+    if (!family || signingOut) {
       setReadiness(null);
       return;
     }
@@ -73,26 +75,49 @@ export function Studio() {
       controller.abort();
       clearInterval(timer);
     };
-  }, [family]);
+  }, [family, signingOut]);
+  function invalidateFamilyLoad() {
+    familyLoad.current?.abort();
+    familyLoad.current = null;
+  }
   async function load() {
-    const response = await fetch("/api/family");
-    if (response.status === 401) {
-      setFamily(null);
-      return;
+    invalidateFamilyLoad();
+    const controller = new AbortController();
+    familyLoad.current = controller;
+    const current = () =>
+      !controller.signal.aborted && familyLoad.current === controller;
+    try {
+      const response = await fetch("/api/family", {
+        signal: controller.signal,
+      });
+      if (!current()) return;
+      if (response.status === 401) {
+        setFamily(null);
+        setSelected(null);
+        setReadiness(null);
+        return;
+      }
+      if (!response.ok)
+        throw new Error("We couldn’t open your workspace. Please try again.");
+      const data: Family = await response.json();
+      if (!current()) return;
+      setFamily(data);
+      setSelected(
+        data.learners.find(
+          (learner) => learner.id === data.selectedLearnerId,
+        ) ?? null,
+      );
+      setError("");
+    } catch (error) {
+      if (current())
+        setError(error instanceof Error ? error.message : "Please try again.");
+    } finally {
+      if (current()) setLoading(false);
     }
-    if (!response.ok)
-      throw new Error("We couldn’t open your workspace. Please try again.");
-    const data: Family = await response.json();
-    setFamily(data);
-    setSelected(
-      data.learners.find((learner) => learner.id === data.selectedLearnerId) ??
-        null,
-    );
   }
   useEffect(() => {
-    load()
-      .catch((error) => setError(error.message))
-      .finally(() => setLoading(false));
+    void load();
+    return invalidateFamilyLoad;
   }, []);
   async function select(learner: Learner | null) {
     setSwitching(true);
@@ -108,12 +133,20 @@ export function Studio() {
     }
   }
   async function signOut() {
+    invalidateFamilyLoad();
+    setSigningOut(true);
+    setError("");
     try {
       await request("/api/auth/sign-out", {});
+      invalidateFamilyLoad();
       setFamily(null);
       setSelected(null);
+      setReadiness(null);
     } catch (error) {
+      await load();
       setError(error instanceof Error ? error.message : "Please try again.");
+    } finally {
+      setSigningOut(false);
     }
   }
   return (
@@ -130,11 +163,13 @@ export function Studio() {
                   ? "Family AI paused"
                   : "Fictional-data preview"}
           </span>
-          {family && <ModelAccessPanel onAccess={setReadiness} />}
+          {family && !signingOut && (
+            <ModelAccessPanel onAccess={setReadiness} />
+          )}
           {family && (
             <button
               className="text-button"
-              disabled={switching}
+              disabled={switching || signingOut}
               onClick={signOut}
             >
               Sign out
@@ -165,7 +200,7 @@ export function Studio() {
           />
         ) : (
           <LearnerPicker
-            busy={switching}
+            busy={switching || signingOut}
             family={family}
             onChange={load}
             onSelect={select}

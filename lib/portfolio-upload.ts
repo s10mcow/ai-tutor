@@ -1,3 +1,4 @@
+import { readBoundedBody } from "./bounded-body.ts";
 import { audioMaximumBytes } from "./audio-contract.ts";
 import { AccessError } from "./family.ts";
 
@@ -10,28 +11,13 @@ export async function portfolioSaveBody(
     .get("content-type")
     ?.startsWith("multipart/form-data;");
   const maximum = multipart ? audioMaximumBytes + 32_768 : 32_768;
-  const reader = request.body?.getReader();
-  if (!reader) throw new AccessError(400, "Choose work to save.");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.length;
-      if (size > maximum) {
-        await reader.cancel();
-        throw new AccessError(
-          413,
-          "Keep recordings under 60 seconds and choose a shorter reflection.",
-        );
-      }
-      chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  const bytes = Buffer.concat(chunks);
+  const bytes = await readBoundedBody(request, maximum, {
+    missing: new AccessError(400, "Choose work to save."),
+    tooLarge: new AccessError(
+      413,
+      "Keep recordings under 60 seconds and choose a shorter reflection.",
+    ),
+  });
   try {
     if (!multipart) return { input: JSON.parse(bytes.toString("utf8")) };
     const form = await new Response(bytes, {

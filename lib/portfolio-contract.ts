@@ -26,7 +26,7 @@ export type PortfolioSummary = Pick<
   PortfolioEntry,
   "id" | "title" | "createdAt"
 >;
-export type WrittenEvidenceInput = {
+export type PortfolioEntryInput = {
   id: string;
   sessionId: string;
   actionIds: string[];

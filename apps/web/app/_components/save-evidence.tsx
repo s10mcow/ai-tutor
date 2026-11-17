@@ -4,7 +4,7 @@ import type { LearningSession } from "../../../../lib/coaching-contract";
 import {
   canSaveWrittenAction,
   type PortfolioEntry,
-  type WrittenEvidenceInput,
+  type PortfolioEntryInput,
 } from "../../../../lib/portfolio-contract";
 import { SpokenReflection } from "./spoken-reflection";
 import { portfolioRequest } from "./portfolio-request";
@@ -67,7 +67,7 @@ function EvidenceEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState<{
-    input: WrittenEvidenceInput;
+    input: PortfolioEntryInput;
     audio: Blob | null;
   } | null>(null);
   useEffect(() => {
@@ -80,7 +80,7 @@ function EvidenceEditor({
     const signal = lifetime.current!.signal;
     setBusy(true);
     setError("");
-    const input: WrittenEvidenceInput = pending?.input ?? {
+    const input: PortfolioEntryInput = pending?.input ?? {
       id: crypto.randomUUID(),
       sessionId: session.id,
       actionIds: selected,

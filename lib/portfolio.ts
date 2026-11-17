@@ -8,7 +8,7 @@ import {
   type PortfolioImage,
   type PortfolioSummary,
   type WrittenEvidence,
-  type WrittenEvidenceInput,
+  type PortfolioEntryInput,
 } from "./portfolio-contract.ts";
 import type { CoachingAction } from "./coaching-contract.ts";
 
@@ -36,8 +36,8 @@ function entry(row: EntryRow): PortfolioEntry {
     createdAt: row.created_at.toISOString(),
   };
 }
-function parseInput(value: unknown, hasAudio: boolean): WrittenEvidenceInput {
-  const input = value as Partial<WrittenEvidenceInput> | null;
+function parseInput(value: unknown, hasAudio: boolean): PortfolioEntryInput {
+  const input = value as Partial<PortfolioEntryInput> | null;
   const validId = (id: unknown): id is string =>
     typeof id === "string" && /^[a-zA-Z0-9-]{1,80}$/.test(id);
   if (
@@ -108,7 +108,7 @@ export async function readPortfolioEntry(
   if (!row) throw new AccessError(404, "That Portfolio entry is unavailable.");
   return entry(row);
 }
-export async function saveWrittenEvidence(
+export async function savePortfolioEntry(
   access: FamilyAccess,
   learnerId: string,
   value: unknown,
