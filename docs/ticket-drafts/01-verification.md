@@ -11,7 +11,15 @@ Red/green evidence, one behavior at a time:
 
 `tests/family-workspace.spec.ts` is the narrow test file. `tests/fixture.ts` creates per-scenario temporary PostgreSQL storage and allocated network ports; no personal databases are used.
 
-Hosted preview remains pending coordination of permitted hosting and storage. Local test success does not satisfy that criterion.
+## Hosted verification
+
+After the parent authorized normal usage charges on their existing Neon Launch and Vercel Pro accounts, the fictional-data preview was deployed at [Learning Studio](https://ai-tutor-ten-puce.vercel.app), with Vercel deployment protection retained. Deployment `dpl_Gusq7BtiNNDu7x1HGxhkfjzrctTs` runs exact commit `23adec6c419b8f860677f1c4a2c54480f712f872`; its Next.js/eve services run on Vercel in iad1 and its PostgreSQL 16 database runs on Neon in aws-us-east-1. No local web server or tunnel serves these requests.
+
+On November 17, 2026 UTC, a real browser created a separate invited fictional parent account and two fictional Learners, selected both workspaces, and returned in a fresh browser context with the trusted session. A second run signed in again and repeated the return check. The hosted family endpoint rejected unauthenticated access with 401. The hosted model-access endpoint reported `ready:false`, `liveReady:false` and `missing_credentials`; no provider calls occurred. The real parent's account remains unclaimed so they can choose their own password.
+
+The private one-off harness and generated credentials are ignored local artifacts, never committed; the visible workspace screenshot is at `/tmp/ai-tutor-research/hosted/returning-workspace.png`. The deployment is independent of local processes. A literal physical-computer power-off check, live teaching evaluation, actual device audio and provider prerequisites remain final-pilot observations rather than claims from this test. Temporary verification access must be removed when hosted verification is finished.
+
+The database is fixed at 0.25 CU with five-minute idle suspension and a 24-hour restore-history window. Logical deletion and restore-history retention are distinct; final-pilot retention verification still applies before child-data activation.
 
 Final checks:
 

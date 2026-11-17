@@ -36,5 +36,5 @@ export type WrittenEvidenceInput = {
 };
 export function canSaveWrittenAction(action: Pick<CoachingAction, "intent">) {
   // Launch questions and coaching controls can contain app-suggested text.
-  return action.intent === "attempt";
+  return action.intent === "attempt" || action.intent === "revision";
 }

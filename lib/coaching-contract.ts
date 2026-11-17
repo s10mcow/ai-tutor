@@ -1,9 +1,12 @@
+import type { ResearchResult } from "./research-contract.ts";
 import type { SessionImage } from "./image-contract.ts";
 import type { ActivityChoice } from "./activity-contract.ts";
 import type { MathsGame } from "./maths-game-contract.ts";
 
 export const coachingIntents = [
   "question",
+  "research",
+  "revision",
   "correction",
   "hint",
   "example",
@@ -23,6 +26,7 @@ export type CoachingAction = {
   intent: CoachingIntent;
   text: string;
   reply: string | null;
+  research?: ResearchResult | null;
   status: "pending" | "complete" | "failed";
 };
 export type LearningSession = {

@@ -70,7 +70,7 @@ Run one scenario with `-g "scenario text"` when changing a narrow behavior. Do n
 
 The code is prepared for a Vercel project with managed PostgreSQL. Use this repository's root as the project root, Node 26, and the root `vercel.ts`; it composes Next.js and eve under one origin. Set all five environment variables above on the target deployment, with `BETTER_AUTH_URL` matching the actual preview URL, then run migrations against the intended hosted database before verification. Use deployment protection as available and retain application authentication.
 
-**The hosted acceptance criterion is pending.** No cloud database or deployment is provisioned by this ticket. Existing paid account availability is not authorization for extra spending. The coordinating implementation must establish suitable hosting/storage and verify the fictional-data flow at a remotely accessible preview URL.
+The parent authorized their existing Neon Launch and Vercel Pro accounts, and the [private fictional-data preview](https://ai-tutor-ten-puce.vercel.app) now runs on those services. Hosted parent setup, two profiles, switching, a fresh-browser return and unauthenticated denial passed; see [hosted verification](docs/ticket-drafts/01-verification.md). Deployment protection remains enabled. This is not activation of live-family AI.
 
 Live-family account/retention evidence and real-model teaching evaluation remain final-pilot gates. Ticket 03 adds a direct Sol adapter and transactional allowance enforcement, exercised only with a controlled HTTP provider. No OpenAI key is needed for fictional fixtures.
 

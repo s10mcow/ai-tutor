@@ -17,7 +17,7 @@ export type MeteredResult<T> = {
 // This function stores billing metadata only; application records own replayable results.
 export async function meteredOperation<T>(operation: {
   attemptId: string;
-  kind: "text" | "image" | "transcription";
+  kind: "text" | "image" | "transcription" | "research";
   pricePolicy: string;
   maximumNanoUsd: bigint;
   dispatch: (config: ProviderConfiguration) => Promise<MeteredResult<T>>;

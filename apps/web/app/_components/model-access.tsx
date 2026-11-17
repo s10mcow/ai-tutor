@@ -79,7 +79,7 @@ export function ModelAccessPanel() {
               <dl className="usage-summary">
                 <dt>App allocation</dt>
                 <dd>{dollars(access.allowanceNanoUsd)}</dd>
-                <dt>Measured usage</dt>
+                <dt>Accounted usage</dt>
                 <dd>{dollars(access.settledNanoUsd)}</dd>
                 <dt>Pending reservations</dt>
                 <dd>{dollars(access.reservedNanoUsd)}</dd>
@@ -92,7 +92,10 @@ export function ModelAccessPanel() {
                 This is the app meter, not the provider’s live credit balance.
                 Each text request needs{" "}
                 {dollars(access.nextTextReservationNanoUsd)} available before it
-                starts; measured usage releases the unused reservation.
+                starts; authoritative usage releases the proven unused
+                reservation. Public-source checks need $7.4460 available and
+                account tokens at conservative long-context rates, which can
+                exceed the provider charge.
               </p>
               {access.checkedAt && (
                 <p className="small">

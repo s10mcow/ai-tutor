@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { PublicSources } from "./public-sources";
 import { VoiceMessage } from "./voice-message";
 import { ReadAloud } from "./read-aloud";
 import { SessionPicture } from "./session-picture";
@@ -447,7 +448,11 @@ export function CoachingSession({
                   {entry.reply && (
                     <div className="tutor-turn">
                       <strong>Tutor</strong>
-                      <p>{entry.reply}</p>
+                      {entry.research ? (
+                        <PublicSources result={entry.research} />
+                      ) : (
+                        <p>{entry.reply}</p>
+                      )}
                     </div>
                   )}
                 </li>
@@ -458,10 +463,12 @@ export function CoachingSession({
             )}
             {failed && (
               <p role="alert" className="error">
-                The Tutor couldn’t reply. This is a service problem, not a mark
-                on your answer. Your input is saved. A retry may use more
-                allowance; unresolved provider usage stays held. Check Model
-                access for details.
+                {failed.intent === "research"
+                  ? "Public lookup failed. No source was verified by this lookup."
+                  : "The Tutor couldn’t reply."}{" "}
+                This is a service problem, not a mark on your answer. Your input
+                is saved. A retry may use more allowance; unresolved provider
+                usage stays held. Check Model access for details.
               </p>
             )}
             {(failed || unsent) && (
@@ -478,7 +485,9 @@ export function CoachingSession({
                     });
                 }}
               >
-                Retry reply
+                {failed?.intent === "research" || unsent?.intent === "research"
+                  ? "Retry lookup"
+                  : "Retry reply"}
               </button>
             )}
             {!paused && hasQuestion && (
@@ -537,6 +546,7 @@ export function CoachingSession({
                           disabled={blocked}
                         >
                           <option value="attempt">Share attempt</option>
+                          <option value="revision">Revise my conclusion</option>
                           <option value="question">Ask a question</option>
                           <option value="evidence">
                             Check supplied evidence
@@ -568,6 +578,19 @@ export function CoachingSession({
                     >
                       {submitLabel} <span aria-hidden="true">↗</span>
                     </button>
+                    <button
+                      type="button"
+                      className="source-inspect"
+                      disabled={blocked || !text.trim()}
+                      onClick={() => action("research", text)}
+                    >
+                      Check public sources
+                    </button>
+                    <small>
+                      Find and read public information only. Each lookup uses
+                      the shared app allowance. Do not include personal details
+                      in a public search.
+                    </small>
                   </form>
                 )}
               </>
