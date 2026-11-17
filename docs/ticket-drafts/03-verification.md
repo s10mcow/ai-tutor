@@ -1,0 +1,52 @@
+# Ticket 03 verification and extension contract
+
+## Delivered behavior
+
+The authenticated read-only **Model access** panel and `GET /api/model-access` distinguish missing credentials, unverified subscription funding, stale/expired evidence, unverified retention, insufficient allowance, provider account rejection, and available access. There is no browser mutation route, checkbox, budget increase or ZDR approval control. Fictional HTTP fixtures have their own synthetic allocation and always report `liveReady: false`.
+
+`lib/tutor-provider.ts` retains the explicitly selected local scripted development preview. Otherwise it uses `lib/sol-provider.ts`: direct OpenAI Responses at the fixed production URL, `gpt-6.1-sol`, `service_tier: default`, `store:false`, foreground, 2,000 maximum output tokens, no tools, no conversation/files/previous-response state, no implicit cache breakpoint or explicit breakpoint, no automatic HTTP/SDK retry. No eve route was opened. Its tools, sandbox, model gate and content instrumentation remain closed.
+
+The provider receives bounded current activity context (including the chosen purpose and explicit declined connections) and the ordered Learner/Tutor exchange, not profile names, family IDs, scratchpad contents or past transcripts. A 64,000-byte request ceiling bounds the app payload; it is explicitly **not** a token estimate. Requests above it preserve input and require a new activity. Input-token preflight is not used because its retention/pricing approval has not been established.
+
+## Reservation and reconciliation
+
+`lib/metered-operation.ts` is the server-owned operation boundary. An authenticated application operation supplies a unique private attempt ID, a versioned operation policy, a proven maximum and one dispatch callback. The transaction locks the shared funding-window row, includes all settled charges and pending/unknown reservations, inserts the new reservation only within allocation, and commits **before** calling the external service. The SQL row lock is not held during the provider call. Each retry requires a new reservation. A duplicate attempt ID cannot dispatch again. Current activity action IDs continue to provide completed/pending replay through the existing application route.
+
+The text policy `sol-standard-no-cache-2026-11-16` reserves the entire accepted 922,000 input-token maximum at $4/M plus 2,000 output tokens at $15/M: **$3.718**. This intentionally pessimistic bound avoids a guessed token count. Measured short-context input/output costs $2/$10 per million; long-context costs $4/$15. All arithmetic is integer nano-USD. Invisible reasoning tokens are already included in output usage and are not added twice. For 10,000 input and 300 output tokens, actual cost is $0.023.
+
+Only consistent provider model/tier/token/cache categories settle the reservation. Missing or contradictory fields, dropped connections, timeouts and HTTP errors retain the full bound as unknown usage. Partial billed responses settle reported usage but are not presented as complete tutoring replies. The adapter disables caching; unexpected cache reads/writes remain unresolved rather than being priced under an unsupported policy. Provider request/response IDs, validated numeric usage and the price-policy version are persisted without message content. Pending records older than 30 seconds are displayed as unresolved and remain fully held. Ending/expiring an activity cannot delete billing records or free allowance.
+
+The reply remains in the temporary activity record, never in the billing ledger. A crash between provider completion and saving the application reply can leave a retryable activity whose previous attempt is charged/held; a retry is explicit and separately reserved. No automatic reconciliation releases unknown usage. A later operator reconciliation must use authoritative billing evidence and idempotent SQL under the same allowance lock, never infer zero cost from a timeout. Account/billing rejection closes the window until operator reconciliation; changing an existing window's allocation or identity also closes it. Do not invent a new window ID to bypass these holds.
+
+## Server-only live evidence
+
+These environment fields describe actual parent/operator-verified evidence, not claims a Learner can submit. Do not copy synthetic test values into a real deployment. The application checks evidence consistency/expiry; it does not independently authenticate receipts or query the provider balance. No evidence has been supplied for this implementation.
+
+- `OPENAI_API_KEY`: project-scoped direct API credential, kept server-side.
+- `TUTOR_FUNDING_EVIDENCE`: JSON with `windowId`, `organizationId`, `projectId`, `evidenceReference` (opaque alphanumeric/hyphen/underscore IDs, max 100 characters); `source: "activated_subscription_grant"`; integer-string `activatedGrantNanoUsd`, `availableGrantNanoUsd`, `allocationNanoUsd`; ISO `checkedAt`, `expiresAt`; `purchasedCreditsAbsent`, `automaticRechargeDisabled`, `unapprovedPostpaidDisabled` all true; `otherConsumers: "free-grant-only"`; `regionalProcessing: false`; `pricePolicy: "sol-standard-no-cache-2026-11-16"`.
+- `TUTOR_RETENTION_EVIDENCE`: JSON with matching `organizationId`, `projectId`, opaque `evidenceReference`, ISO `expiresAt`, and `approvedZdr`, `responsesTextApproved`, `applicationRetentionVerified` all true. This records actual approved ZDR and verified application cleanup/backups for this text path; `store:false` alone is insufficient.
+
+The activated grant and currently available grant must cover allocation. Funding evidence closes after **15 minutes** or grant expiry, whichever is sooner; it does not renew on a calendar date. Refresh evidence for the **same** grant/window without changing the allocation identity, after checking actual account state. The no-purchased-credit/no-recharge/no-unapproved-postpaid account constraint prevents using paid funding when other consumers exhaust the common free grant. Another app can still exhaust that grant; provider `credit_balance_exhausted`/quota responses close access. A shared balance snapshot alone, or app headroom with purchased credits enabled, is not accepted as strict subscription-only assurance. Provider hard limits remain defense in depth to be verified in the final pilot.
+
+For controlled HTTP testing only, `TUTOR_OPENAI_FIXTURE_URL` must be loopback HTTP and non-production, with integer-string `TUTOR_FIXTURE_ALLOWANCE_NANO_USD`. The fixture uses a fixed fictional key, never the real API key. Production ignores this transport. The original `TUTOR_PREVIEW_URL` remains a separate, non-chargeable scripted development service; it never confers live readiness.
+
+## Future operations
+
+Text is the only currently permitted metered operation kind. Image understanding, speech and research must add an explicit operation kind, approved endpoint/feature retention evidence, versioned rates, a proven bound and authoritative usage interpretation before calling this shared transaction boundary. They must not supply zero-cost placeholders, dispatch inside a retry loop, or use an independent fetch path. One callback must make exactly one bounded provider request; each actual attempt gets a unique identity. If a future SDK/eve flow can retry, compact or call tools, every actual dispatch must enter this boundary. The caller still owns family/Learner authorization and logical replay. Metering does not grant tool permissions or session access.
+
+## Validation and remaining limits
+
+Browser scenarios use real Next.js routes, Better Auth cookies, isolated PostgreSQL and controlled external HTTP responses. They cover readiness privacy/read-only behavior, exact direct request policy, measured/hidden usage, completed replay across restart, pending replay, concurrent allowance exhaustion, disconnected-outcome holds and explicit retry, funding/retention gates, account rejection, partial output, and unverifiable usage. The first readiness, direct-response, retry explanation, evidence-gate and exhausted-provider reason assertions each failed before their corresponding implementation.
+
+Validation performed with Node 26.13.1:
+
+- `npm run test:browser -- tests/model-access.spec.ts`: 8 scenarios passed before the activity integration.
+- After merging ticket 04, `npm run test:browser -- tests/model-access.spec.ts -g 'chosen activity purpose|direct Sol reply'`: 2 passed. The new purpose assertion first failed against the old direct adapter, then passed with the activity context and declined-connection instruction.
+- `npm run test:browser -- tests/text-coaching.spec.ts -g 'a Learner starts|a failed reply|unconfigured Tutor'`: 3 affected scripted-preview scenarios passed after integration.
+- `npm run typecheck`: passed before and after integration.
+- `npm run build`: Next.js and eve passed. The changed web context was rebuilt after integration with `npm run build:web`; it passed. No eve behavior changed in the merge.
+- Readiness panel inspected at 1366×768: labels, dollar values and conservative hold explanation fit the laptop viewport; the panel is scrollable if evidence dates add height. React guidance reviewed for component separation, abort cleanup, read-only controls and browser-safe type imports.
+
+ This work does not establish remote hosting, actual subscription credit eligibility or activation, account/ZDR approval, deployed cleanup/backup retention, real model response schema or teaching quality. No live provider request, credential, credit purchase, limit change, or cloud resource was used. Those final-pilot gates remain closed.
+
+Primary documentation checked 2026-11-16: [Sol model bounds](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [pricing](https://developers.openai.com/api/docs/pricing), [Responses request options](https://developers.openai.com/api/reference/resources/responses/methods/create), [prompt caching and usage categories](https://developers.openai.com/api/docs/guides/prompt-caching), [subscription-credit funding](https://developers.openai.com/api/docs/guides/chatgpt-api-credits), and [provider retention](https://developers.openai.com/api/docs/guides/your-data).

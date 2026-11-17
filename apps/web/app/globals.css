@@ -899,6 +899,41 @@ select:focus-visible {
   margin-top: 12px;
 }
 
+.model-access {
+  position: relative;
+}
+.model-access-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  width: min(440px, 85vw);
+  max-height: 75vh;
+  overflow: auto;
+  padding: 24px;
+  color: var(--ink);
+  background: #fffdf7;
+  border: 1px solid #c9c4b4;
+  border-radius: 16px;
+  box-shadow: 0 12px 36px #262b2226;
+}
+.model-access-panel h2 {
+  font-size: 1.4rem;
+  margin: 0 0 12px;
+}
+.model-access-panel p {
+  margin: 12px 0;
+}
+.usage-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 16px;
+}
+.usage-summary dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
 .activity-discovery {
   padding: 24px;
   border: 1px solid var(--line);
