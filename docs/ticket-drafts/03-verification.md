@@ -59,6 +59,7 @@ The funding-policy refinement was checked separately at the existing browser/aut
 - The legacy shared-consumer case first returned available access, then passed after requiring exclusive app-ledger organization usage.
 - `npm run test:browser -- tests/model-access.spec.ts -g 'operator evidence'`: 4 passed, covering the new policy and each actual expiry.
 - `npm run test:browser -- tests/model-access.spec.ts -g 'unknown usage stays held|concurrent Learners|model readiness is read-only'`: 3 passed. Unknown charges survived restart, retry, activity end, a rejected allocation change and restoration of the original configuration. The ledger/reservation implementation and window identity algorithm were not changed.
+- After merging integration through `a3c4781` (written Portfolio), `npm run typecheck` and `npm run build:web` passed. The merge did not change readiness or metering, so the already-passing browser checks were not repeated. No eve code changed and its build was not rerun for this refinement.
 
 This work does not establish remote hosting, actual subscription credit eligibility or activation, account/ZDR approval, deployed cleanup/backup retention, real model response schema or teaching quality. No live provider request, credential, credit purchase, limit change, or cloud resource was used. Those final-pilot gates remain closed.
 
