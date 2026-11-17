@@ -53,7 +53,11 @@ export function ModelAccessPanel() {
         Model access
       </button>
       {open && (
-        <section className="model-access-panel" aria-label="Model access">
+        <section
+          className="model-access-panel"
+          aria-label="Model access"
+          tabIndex={0}
+        >
           <h2>Model access</h2>
           {error ? (
             <p role="alert">{error}</p>
@@ -92,10 +96,19 @@ export function ModelAccessPanel() {
               </p>
               {access.checkedAt && (
                 <p className="small">
-                  Funding checked: {new Date(access.checkedAt).toLocaleString()}
-                  . Grant expires:{" "}
-                  {new Date(access.expiresAt!).toLocaleString()}. Other
-                  applications can still exhaust the shared free grant.
+                  Last operator check:{" "}
+                  {new Date(access.checkedAt).toLocaleString()}. This records
+                  when the evidence was checked; it is not a live balance check.
+                  Grant expires: {new Date(access.expiresAt!).toLocaleString()}.
+                  Account evidence expires:{" "}
+                  {new Date(access.evidenceExpiresAt!).toLocaleString()}.
+                  {access.retentionExpiresAt && (
+                    <>
+                      {" "}
+                      Retention approval expires:{" "}
+                      {new Date(access.retentionExpiresAt).toLocaleString()}.
+                    </>
+                  )}
                 </p>
               )}
               <p className="small">
