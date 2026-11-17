@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createServer } from "node:net";
 
+import { controlledTutor } from "./tutor-provider";
+
 const pgBin = process.env.TEST_PG_BIN ?? "/opt/homebrew/opt/postgresql@16/bin";
 async function freePort() {
   const server = createServer();
@@ -17,9 +19,26 @@ async function freePort() {
 }
 export const test = base.extend<{
   app: { url: string; restart: () => Promise<void> };
+  tutor: Awaited<ReturnType<typeof controlledTutor>>;
+  sessionRetentionSeconds: number;
+  controlledTutorEnabled: boolean;
 }>({
+  sessionRetentionSeconds: [86400, { option: true }],
+  controlledTutorEnabled: [true, { option: true }],
+  tutor: async ({}, use) => {
+    const tutor = await controlledTutor();
+    try {
+      await use(tutor);
+    } finally {
+      await tutor.close();
+    }
+  },
   app: [
-    async ({}, use, testInfo) => {
+    async (
+      { tutor, sessionRetentionSeconds, controlledTutorEnabled },
+      use,
+      testInfo,
+    ) => {
       const directory = await mkdtemp(
         path.join(tmpdir(), "learning-studio-test-"),
       );
@@ -37,6 +56,8 @@ export const test = base.extend<{
         FAMILY_SETUP_EMAILS: "parent@example.test,other@example.test",
         FAMILY_SETUP_CODE: "fictional-family-invite",
         NEXT_TELEMETRY_DISABLED: "1",
+        TUTOR_PREVIEW_URL: controlledTutorEnabled ? tutor.url : "",
+        TUTOR_SESSION_RETENTION_SECONDS: String(sessionRetentionSeconds),
       };
       async function stop() {
         if (

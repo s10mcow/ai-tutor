@@ -1,6 +1,6 @@
 # Learning Studio
 
-A private family workspace with one parent account, separate Learner profiles, and a remembered profile on each trusted browser. This preview accepts fictional information only. Tutor access is closed; no model or speech calls are made.
+A private family workspace with one parent account, separate Learner profiles, and a remembered profile on each trusted browser. This preview accepts fictional information only. Typed activities support questions, hints, examples, attempts, corrections, and pace changes through a controlled local Tutor service. Live model and speech access remain closed.
 
 ## Run locally
 
@@ -40,6 +40,7 @@ Install the browser once:
 ```sh
 npx playwright install chromium
 npm run test:browser -- tests/family-workspace.spec.ts
+npm run test:browser -- tests/text-coaching.spec.ts
 npm run typecheck
 npm run build
 ```
@@ -70,4 +71,40 @@ The code is prepared for a Vercel project with managed PostgreSQL. Use this repo
 
 **The hosted acceptance criterion is pending.** No cloud database or deployment is provisioned by this ticket. Existing paid account availability is not authorization for extra spending. The coordinating implementation must establish suitable hosting/storage and verify the fictional-data flow at a remotely accessible preview URL.
 
-Live-family readiness, approved provider retention, eligible credit access, allowance enforcement, and tutoring behavior belong to later tickets. No OpenAI key is needed for this slice.
+Live-family readiness, approved provider retention, eligible credit access, allowance enforcement, and real-model teaching evaluation belong to later tickets. No OpenAI key is needed for this slice.
+
+## Temporary typed activities
+
+Choose **Start an activity**, type a fictional question, and use the hint, example, attempt, correction, or pace controls. The browser scenarios supply a local HTTP Tutor with controlled replies and failures; the real application still enforces parent authentication, Learner ownership, and PostgreSQL persistence. Without a configured service the app preserves the question and offers retry or End activity. `TUTOR_PREVIEW_URL` is development-only and must point to `http://127.0.0.1:<port>`; production never dispatches through it. No key, live provider, paid fallback, or publicly reachable eve route is enabled.
+
+Each Learner has one current activity. Its question and turns survive reloads and web-process restarts for a fixed maximum of **24 hours from creation**, without extending on use. `TUTOR_SESSION_RETENTION_SECONDS` can shorten that period, never lengthen it. An activity accepts at most 40 Learner actions, with 2,000 characters per input and 6,000 per Tutor reply. Scratchpad contents remain local temporary state and are never sent to the provider.
+
+**End activity immediately deletes the activity and its turns.** Expired activities cannot be read or resumed. Session access opportunistically deletes expired records, and `npm run sessions:purge` deletes them without waiting for another visit. The hosted deployment must schedule that command at least hourly and verify deletion before live-family activation. Until the scheduler is installed, logical expiry is enforced but physical deletion during idle periods is not guaranteed. Database backups need a separately verified retention policy. Current activity context is distinct from later learning notes and explicit Portfolio saves.
+
+Submitted actions keep their identity across retries. Replaying a completed or pending action returns its existing state; changed input with the same identity is rejected. Failed replies retain the input, and a retry creates a new provider-attempt identity for the same Learner turn. The local provider timeout is 15 seconds; an orphaned pending action becomes retryable after 30 seconds. These are application recovery rules, not proof of zero provider spend after an ambiguous failure. Ticket 03 must reserve and reconcile each real attempt before enabling chargeable dispatch.
+
+Implementation and follow-on contracts are recorded in [ticket 02 verification](docs/ticket-drafts/02-verification.md).
+
+### Try the fictional coaching demo manually
+
+After the local setup and migrations above, open two terminals in this repository with Node 26 selected. In the first:
+
+```sh
+npm run preview:tutor
+```
+
+In the second:
+
+```sh
+TUTOR_PREVIEW_URL=http://127.0.0.1:4321 npm run dev:web
+```
+
+Open `http://localhost:3000`, sign in with your invited fictional parent account, and choose a fictional Learner. Start an activity and ask **How can I share 24 pencils equally among 6 cups?** Try **Show an example**, share an attempt, then choose **Correct question** and change 24 to 30 pencils. The service is a fixed pencil-sharing script: it demonstrates the controls and context, and does not evaluate answers or support arbitrary topics. The page labels it **Scripted Tutor preview**.
+
+To simulate one service failure, run this in another terminal before the next action:
+
+```sh
+curl -X POST http://127.0.0.1:4321/fail-next
+```
+
+Send an attempt or request a hint, reload to see the saved input, and choose **Retry reply**. The retry succeeds without adding another Learner turn. **End activity** clears the temporary conversation. Stop the preview service and web server with Ctrl-C. This demo uses your configured local application database; automated tests instead create and delete an isolated PostgreSQL cluster.
