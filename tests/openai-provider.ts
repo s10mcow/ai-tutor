@@ -36,11 +36,26 @@ export async function controlledOpenAI() {
     };
   }
   const server = createServer(async (req, res) => {
-    let text = "";
-    for await (const chunk of req) text += chunk;
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    const bytes = Buffer.concat(chunks);
+    let parsed: unknown;
+    if (req.headers["content-type"]?.startsWith("multipart/form-data")) {
+      const form = await new Response(bytes, {
+        headers: { "Content-Type": req.headers["content-type"] },
+      }).formData();
+      const file = form.get("file") as File;
+      parsed = {
+        model: form.get("model"),
+        response_format: form.get("response_format"),
+        fileName: file.name,
+        fileType: file.type,
+        fileBytes: file.size,
+      };
+    } else parsed = JSON.parse(bytes.toString());
     requests.push({
       path: req.url!,
-      body: JSON.parse(text),
+      body: parsed,
       headers: req.headers,
     });
     const next = responses.shift() ?? { status: 503 };
@@ -66,6 +81,24 @@ export async function controlledOpenAI() {
     requests,
     reply(text: string, usage?: unknown) {
       responses.push({ status: 200, body: body(text, usage) });
+    },
+    transcribe(
+      text: string,
+      usage: unknown = { type: "duration", seconds: 1 },
+    ) {
+      responses.push({ status: 200, body: { text, usage } });
+    },
+    holdTranscription(text: string) {
+      let release!: () => void;
+      const wait = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      responses.push({
+        status: 200,
+        body: { text, usage: { type: "duration", seconds: 1 } },
+        wait,
+      });
+      return release;
     },
     incomplete() {
       responses.push({

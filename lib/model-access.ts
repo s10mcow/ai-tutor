@@ -1,3 +1,4 @@
+import { transcriptionReservationNanoUsd } from "./audio-contract.ts";
 import { createHash } from "node:crypto";
 import { database } from "./database.ts";
 import type { ModelAccess } from "./model-access-contract.ts";
@@ -32,7 +33,7 @@ function evidence(value: string | undefined): Record<string, unknown> {
   }
 }
 export function providerConfiguration(
-  kind: "text" | "image" = "text",
+  kind: "text" | "image" | "transcription" = "text",
 ): ProviderConfiguration {
   const base: ProviderConfiguration = {
     mode:
@@ -166,6 +167,7 @@ export function providerConfiguration(
     retention.projectId !== funding.projectId ||
     retention.approvedZdr !== true ||
     retention.responsesTextApproved !== true ||
+    (kind === "transcription" && retention.transcriptionsApproved !== true) ||
     (kind === "image" && retention.responsesImagesApproved !== true) ||
     retention.applicationRetentionVerified !== true ||
     !id(retention.evidenceReference) ||
@@ -175,7 +177,7 @@ export function providerConfiguration(
     return {
       ...verified,
       reason: "unverified_retention",
-      message: `Live family retention approval is unverified for this project and ${kind === "image" ? "Responses image feature" : "text endpoint"}. store:false alone is not approval.`,
+      message: `Live family retention approval is unverified for this project and ${kind === "transcription" ? "audio transcription endpoint" : kind === "image" ? "Responses image feature" : "text endpoint"}. store:false alone is not approval.`,
     };
   }
   const retentionExpiresAt = new Date(
@@ -235,7 +237,7 @@ export async function allowanceTotals(windowId: string) {
   };
 }
 export async function modelAccess(
-  kind: "text" | "image" = "text",
+  kind: "text" | "image" | "transcription" = "text",
 ): Promise<ModelAccess> {
   const config = providerConfiguration(kind);
   const totals = await allowanceTotals(config.windowId);
@@ -260,7 +262,13 @@ export async function modelAccess(
     reason = window.blocked_reason;
     message =
       "The provider rejected account access or funding. Parent verification is needed before more requests.";
-  } else if (reason === "available" && remaining < textReservationNanoUsd) {
+  } else if (
+    reason === "available" &&
+    remaining <
+      (kind === "transcription"
+        ? transcriptionReservationNanoUsd
+        : textReservationNanoUsd)
+  ) {
     reason = "allowance_exhausted";
     message = `The remaining app allowance cannot cover another ${kind} request. Saved work is still available.`;
   }
