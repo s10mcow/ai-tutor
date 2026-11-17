@@ -4,6 +4,7 @@ import { SaveEvidence } from "./save-evidence";
 import { TutorAccessNote } from "./model-access";
 import type { Learner } from "../../../../lib/family";
 import { ActivityDiscovery } from "./activity-discovery";
+import { MathsGame } from "./maths-game";
 import type { ActivityLaunch } from "../../../../lib/activity-contract";
 import type {
   CoachingInput,
@@ -193,6 +194,17 @@ export function CoachingSession({
         )}
         <ActivityDiscovery busy={busy} onChoose={start} />
       </>
+    );
+  if (session?.activity?.kind === "maths-game")
+    return (
+      <MathsGame
+        key={session.id}
+        session={session}
+        onChange={receive}
+        onEnd={end}
+        ending={ending}
+        sessionError={error}
+      />
     );
   return (
     <div className="work-columns coaching-columns">
