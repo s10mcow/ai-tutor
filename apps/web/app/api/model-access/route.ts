@@ -3,6 +3,10 @@ import { modelAccess } from "../../../../../lib/model-access";
 export async function GET(request: Request) {
   return familyResponse(async () => {
     await requireFamily(request);
-    return modelAccess();
+    return modelAccess(
+      new URL(request.url).searchParams.get("operation") === "transcription"
+        ? "transcription"
+        : "text",
+    );
   });
 }

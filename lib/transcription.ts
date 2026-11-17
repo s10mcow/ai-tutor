@@ -1,0 +1,183 @@
+import { createHash } from "node:crypto";
+import { AccessError, selectedLearnerId, type FamilyAccess } from "./family.ts";
+import { readSession } from "./coaching.ts";
+import { meteredOperation } from "./metered-operation.ts";
+import {
+  audioMaximumBytes,
+  audioMaximumSeconds,
+  audioSampleRate,
+  transcriptionPricePolicy,
+  transcriptionReservationNanoUsd,
+} from "./audio-contract.ts";
+
+// Only the canonical PCM WAV emitted by our capture is accepted. No compressed
+// duration guesses, trailing metadata, user filenames, URLs or provider Files.
+export function validateRecording(bytes: Buffer) {
+  if (
+    bytes.length < 44 ||
+    bytes.length > audioMaximumBytes ||
+    bytes.toString("ascii", 0, 4) !== "RIFF" ||
+    bytes.readUInt32LE(4) !== bytes.length - 8 ||
+    bytes.toString("ascii", 8, 16) !== "WAVEfmt " ||
+    bytes.readUInt32LE(16) !== 16 ||
+    bytes.readUInt16LE(20) !== 1 ||
+    bytes.readUInt16LE(22) !== 1 ||
+    bytes.readUInt32LE(24) !== audioSampleRate ||
+    bytes.readUInt32LE(28) !== audioSampleRate * 2 ||
+    bytes.readUInt16LE(32) !== 2 ||
+    bytes.readUInt16LE(34) !== 16 ||
+    bytes.toString("ascii", 36, 40) !== "data" ||
+    bytes.readUInt32LE(40) !== bytes.length - 44 ||
+    (bytes.length - 44) % 2 !== 0 ||
+    bytes.length - 44 < audioSampleRate / 2
+  ) {
+    throw new AccessError(
+      400,
+      "Record between a quarter second and 60 seconds using the microphone control.",
+    );
+  }
+  return (bytes.length - 44) / (audioSampleRate * 2);
+}
+export async function boundedRecording(request: Request) {
+  if (request.headers.get("content-type") !== "audio/wav")
+    throw new AccessError(
+      415,
+      "This recording format is unavailable. You can still type.",
+    );
+  const reader = request.body?.getReader();
+  if (!reader) throw new AccessError(400, "No recording was received.");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > audioMaximumBytes) {
+        await reader.cancel();
+        throw new AccessError(413, "Record no more than 60 seconds at a time.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = Buffer.concat(chunks);
+  validateRecording(bytes);
+  return bytes;
+}
+export async function transcribeRecording(
+  access: FamilyAccess,
+  learnerId: string,
+  sessionId: string,
+  request: Request,
+) {
+  const session = await readSession(access, learnerId, sessionId);
+  if (session.activity?.kind === "maths-game")
+    throw new AccessError(400, "Use the game controls for this activity.");
+  const id = request.headers.get("x-recording-id") ?? "";
+  if (!/^[a-zA-Z0-9-]{1,80}$/.test(id))
+    throw new AccessError(400, "Start a new recording.");
+  const bytes = await boundedRecording(request);
+  const attemptId = createHash("sha256")
+    .update(
+      JSON.stringify([
+        "transcription",
+        access.familyId,
+        learnerId,
+        sessionId,
+        id,
+      ]),
+    )
+    .digest("hex");
+  let text: string | null;
+  try {
+    text = await meteredOperation<string | null>({
+      attemptId,
+      kind: "transcription",
+      pricePolicy: transcriptionPricePolicy,
+      maximumNanoUsd: transcriptionReservationNanoUsd,
+      dispatch: async (config) => {
+        const form = new FormData();
+        form.set("model", "gpt-transcribe");
+        form.set("response_format", "json");
+        form.set(
+          "file",
+          new Blob([new Uint8Array(bytes)], { type: "audio/wav" }),
+          "message.wav",
+        );
+        const response = await fetch(
+          new URL("/v1/audio/transcriptions", config.endpoint),
+          {
+            method: "POST",
+            body: form,
+            cache: "no-store",
+            redirect: "error",
+            signal: AbortSignal.timeout(15_000),
+            headers: {
+              Authorization: `Bearer ${config.key}`,
+              ...(config.projectId
+                ? {
+                    "OpenAI-Project": config.projectId,
+                    "OpenAI-Organization": config.organizationId!,
+                  }
+                : {}),
+            },
+          },
+        );
+        const data = await response.json();
+        const seconds: unknown = data?.usage?.seconds;
+        const validUsage =
+          response.ok &&
+          data?.usage?.type === "duration" &&
+          typeof seconds === "number" &&
+          Number.isFinite(seconds) &&
+          seconds > 0 &&
+          seconds <= audioMaximumSeconds;
+        // Round up a fractional second rather than under-accounting. Missing or
+        // incompatible usage retains the entire minute reservation for reconciliation.
+        const measuredNanoUsd = validUsage
+          ? BigInt(Math.ceil(seconds as number)) * 75_000n
+          : null;
+        return {
+          value:
+            response.ok &&
+            typeof data?.text === "string" &&
+            data.text.trim().length > 0 &&
+            data.text.trim().length <= 2000
+              ? data.text.trim()
+              : null,
+          measuredNanoUsd,
+          usage: validUsage
+            ? {
+                type: "duration",
+                seconds,
+                accountedSeconds: Math.ceil(seconds as number),
+              }
+            : undefined,
+          requestId: response.headers.get("x-request-id") ?? undefined,
+          blockReason: [401, 403, 429].includes(response.status)
+            ? "speech_provider_access_rejected"
+            : undefined,
+        };
+      },
+    });
+  } catch {
+    throw new AccessError(
+      503,
+      "Transcription is unavailable or this recording was already submitted. You can type or make a new recording. An uncertain request keeps its allowance held; another recording may use more.",
+    );
+  }
+  await readSession(access, learnerId, sessionId);
+  if ((await selectedLearnerId(access)) !== learnerId)
+    throw new AccessError(
+      409,
+      "The Learner changed. The transcription was discarded.",
+    );
+  if (!text)
+    throw new AccessError(
+      503,
+      "Speech could not be transcribed. Try a shorter recording or type your message.",
+    );
+  return { text };
+}

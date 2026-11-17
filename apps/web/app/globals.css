@@ -1265,3 +1265,10 @@ select:focus-visible {
   line-height: 1.4;
   margin-top: 10px;
 }
+
+.voice-message { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; }
+.voice-message small, .voice-message label, .voice-message textarea { width: 100%; }
+.voice-message textarea { min-height: 68px; }
+.voice-message p { margin: 0; font-size: 0.88rem; }
+.read-aloud { display: flex; align-items: center; gap: 10px; }
+.read-aloud button, .voice-message button { padding: 8px 12px; font-size: 0.82rem; }

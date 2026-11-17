@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { VoiceMessage } from "./voice-message";
+import { ReadAloud } from "./read-aloud";
 import { RememberNotes, ReturnVisit } from "./learning-notes";
 import { SaveEvidence } from "./save-evidence";
 import { TutorAccessNote } from "./model-access";
@@ -318,6 +320,12 @@ export function CoachingSession({
                 </li>
               ))}
             </ol>
+            <ReadAloud
+              text={
+                session.actions.findLast((entry) => entry.reply)?.reply ?? ""
+              }
+              disabled={blocked}
+            />
             {(busy || waiting) && (
               <p role="status">The Tutor is thinking. Your input is saved…</p>
             )}
@@ -378,6 +386,12 @@ export function CoachingSession({
                 </button>
               </div>
             )}
+            <VoiceMessage
+              key={session.id}
+              url={`${url}/${session.id}`}
+              disabled={blocked}
+              onUse={setText}
+            />
             <form
               onSubmit={(event: FormEvent) => {
                 event.preventDefault();
