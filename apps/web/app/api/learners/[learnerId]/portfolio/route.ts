@@ -6,7 +6,7 @@ import {
 } from "../../../../../../../lib/family";
 import {
   listPortfolio,
-  saveWrittenEvidence,
+  savePortfolioEntry,
 } from "../../../../../../../lib/portfolio";
 type Context = { params: Promise<{ learnerId: string }> };
 export async function GET(request: Request, { params }: Context) {
@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: Context) {
     const access = await requireFamily(request);
     const body = await portfolioSaveBody(request);
     return {
-      entry: await saveWrittenEvidence(
+      entry: await savePortfolioEntry(
         access,
         (await params).learnerId,
         body.input,

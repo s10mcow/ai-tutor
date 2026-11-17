@@ -26,6 +26,111 @@ async function setUpFamily(
   }
 }
 
+test("a delayed family refresh cannot restore Learners after sign-out", async ({
+  page,
+}) => {
+  await setUpFamily(page);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let fetched!: () => void;
+  const captured = new Promise<void>((resolve) => {
+    fetched = resolve;
+  });
+  const settled = Promise.race([
+    page.waitForEvent("requestfinished", (request) =>
+      request.url().endsWith("/api/family"),
+    ),
+    page.waitForEvent("requestfailed", (request) =>
+      request.url().endsWith("/api/family"),
+    ),
+  ]);
+  await page.route(
+    "**/api/family",
+    async (route) => {
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      fetched();
+      await held;
+      await route.fulfill({ response });
+    },
+    { times: 1 },
+  );
+  try {
+    await page.getByLabel("Learner name").fill("ReplayProbe");
+    await page.getByRole("button", { name: "Add Learner" }).click();
+    await captured;
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Welcome back." }),
+    ).toBeVisible();
+    release();
+    await settled;
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    await expect(
+      page.getByRole("heading", { name: "Welcome back." }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: /Open (River|Sky|ReplayProbe)’s workspace/,
+      }),
+    ).toHaveCount(0);
+    expect((await page.request.get("/api/family")).status()).toBe(401);
+    await page.getByLabel("Parent email").fill("parent@example.test");
+    await page
+      .getByLabel("Password", { exact: true })
+      .fill("Fictional-parent-password-42");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Open ReplayProbe’s workspace" }),
+    ).toBeVisible();
+  } finally {
+    release();
+  }
+});
+
+test("a failed sign-out keeps the family usable and can be retried", async ({
+  page,
+}) => {
+  await setUpFamily(page);
+  await page.route(
+    "**/api/auth/sign-out",
+    (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "Sign-out is temporarily unavailable. Try again.",
+        }),
+      }),
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "Sign-out is temporarily unavailable",
+  );
+  await expect(
+    page.getByRole("button", { name: "Open River’s workspace" }),
+  ).toBeEnabled();
+  expect((await page.request.get("/api/family")).status()).toBe(200);
+  await page.getByRole("button", { name: "Open River’s workspace" }).click();
+  await expect(
+    page.getByRole("heading", { name: "River’s learning workspace" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Welcome back." }),
+  ).toBeVisible();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  expect((await page.request.get("/api/family")).status()).toBe(401);
+});
+
 test("a parent establishes a family and two Learners without child email accounts", async ({
   page,
 }, testInfo) => {

@@ -1,11 +1,14 @@
+import { readBoundedBody } from "./bounded-body.ts";
 import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { database } from "./database.ts";
 import { AccessError, requireLearner, type FamilyAccess } from "./family.ts";
 import { solResponse } from "./sol-provider.ts";
-import type { SessionImage } from "./image-contract.ts";
-
-const maximumUploadBytes = 5_000_000;
+import {
+  imageMaximumBytes,
+  imageUploadSizeError,
+  type SessionImage,
+} from "./image-contract.ts";
 const fields =
   'id, kind, status, interpretation, confirmed_description AS "confirmedDescription"';
 export async function sessionImages(
@@ -56,30 +59,6 @@ export async function ownedImage(
   if (!row) throw new AccessError(404, "That picture is unavailable.");
   return row;
 }
-// Streaming limit also applies when Content-Length is absent or dishonest.
-async function boundedBytes(request: Request) {
-  if (Number(request.headers.get("content-length")) > maximumUploadBytes)
-    throw new AccessError(413, "Choose a picture smaller than 5 MB.");
-  const reader = request.body?.getReader();
-  if (!reader) throw new AccessError(400, "Choose a picture first.");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const item = await reader.read();
-      if (item.done) break;
-      size += item.value.length;
-      if (size > maximumUploadBytes) {
-        await reader.cancel();
-        throw new AccessError(413, "Choose a picture smaller than 5 MB.");
-      }
-      chunks.push(item.value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  return Buffer.concat(chunks);
-}
 export async function uploadImage(
   access: FamilyAccess,
   learnerId: string,
@@ -93,7 +72,10 @@ export async function uploadImage(
   const kind = request.headers.get("x-picture-kind");
   if (kind !== "workbook" && kind !== "art")
     throw new AccessError(400, "Choose workbook or art.");
-  const input = await boundedBytes(request);
+  const input = await readBoundedBody(request, imageMaximumBytes, {
+    missing: new AccessError(400, "Choose a picture first."),
+    tooLarge: new AccessError(413, imageUploadSizeError),
+  });
   const rasterSignature =
     input
       .subarray(0, 8)
