@@ -1399,3 +1399,42 @@ select:focus-visible {
 .session-picture[data-confirmed="false"] .attached-picture {
   max-height: 110px;
 }
+
+.public-sources {
+  border-left: 3px solid var(--accent, #216455);
+  padding: 0.4rem 0.8rem;
+  overflow-wrap: anywhere;
+}
+.public-sources h3 {
+  font-size: 1rem;
+  margin: 0.3rem 0;
+}
+.public-sources a {
+  color: #14584a;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+}
+.public-sources ul {
+  padding-left: 1.3rem;
+}
+.public-sources small {
+  display: block;
+}
+
+.source-dialog {
+  width: min(720px, calc(100vw - 48px));
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  border: 1px solid #b5c3ac;
+  border-radius: 14px;
+  padding: 28px;
+  color: var(--ink);
+  background: #fffef8;
+}
+.source-dialog::backdrop {
+  background: #142c2566;
+}
+.source-dialog form {
+  margin-top: 20px;
+}

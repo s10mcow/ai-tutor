@@ -6,6 +6,10 @@ import { currentFreshChallenge } from "../lib/coaching-contract.ts";
 // It neither calls a model nor stores conversation content.
 let failNext = false;
 const replies = {
+  research:
+    "Public lookup is unavailable in this scripted preview. No sources have been retrieved.",
+  revision:
+    "What evidence changed your conclusion, and what is still uncertain?",
   question:
     "Let’s take one small step. For our pencil-sharing practice, sketch 6 cups. How could you give every cup the same number of pencils?",
   hint: "Try giving each cup one pencil at a time. What stays equal as you go around the cups?",

@@ -1,3 +1,4 @@
+import { researchClaim } from "./sol-provider.ts";
 import { sessionImages } from "./session-images.ts";
 import { randomUUID } from "node:crypto";
 import { database } from "./database.ts";
@@ -46,7 +47,7 @@ async function snapshot(row: SessionRow): Promise<LearningSession> {
   );
   const actions = (
     await database.query<CoachingAction>(
-      "SELECT id, intent, text, reply, status FROM learning_action WHERE session_id = $1 ORDER BY sequence",
+      "SELECT id, intent, text, reply, research, status FROM learning_action WHERE session_id = $1 ORDER BY sequence",
       [row.id],
     )
   ).rows;
@@ -181,6 +182,16 @@ export async function submitAction(
     return readSession(access, learnerId, sessionId);
   }
   const action = parseInput(input);
+  if (
+    action.intent === "research" &&
+    Object.keys(input as object).some(
+      (key) => !["id", "intent", "text"].includes(key),
+    )
+  )
+    throw new AccessError(
+      400,
+      "Public lookup accepts only a claim. Tool settings and external actions are not supported.",
+    );
   const attemptId = randomUUID();
   let dispatch = false;
   const client = await database.connect();
@@ -229,7 +240,11 @@ export async function submitAction(
         )
       )
         throw new AccessError(409, "Please retry the unfinished reply first.");
-      if (!actions.length && action.intent !== "question")
+      if (
+        !actions.length &&
+        action.intent !== "question" &&
+        action.intent !== "research"
+      )
         throw new AccessError(400, "Start with a question.");
       if (!existing && actions.length >= 40)
         throw new AccessError(
@@ -279,26 +294,32 @@ export async function submitAction(
   const session = await readSession(access, learnerId, sessionId);
   if (!dispatch) return session;
   try {
-    const reply = await tutorReply({
-      familyId: access.familyId,
-      learnerId,
-      sessionId,
-      actionId: action.id,
-      attemptId,
-      problem: session.problem,
-      activity: session.activity,
-      actions: session.actions,
-      confirmedPictures: session.images
-        .filter((image) => image.status === "confirmed")
-        .map((image) => ({
-          kind: image.kind,
-          description: image.confirmedDescription!,
-        })),
-      learningNotes: await readLearningNotes(access, learnerId),
-    });
+    const research =
+      action.intent === "research"
+        ? await researchClaim(attemptId, action.text)
+        : null;
+    const reply = research
+      ? research.text
+      : await tutorReply({
+          familyId: access.familyId,
+          learnerId,
+          sessionId,
+          actionId: action.id,
+          attemptId,
+          problem: session.problem,
+          activity: session.activity,
+          actions: session.actions,
+          confirmedPictures: session.images
+            .filter((image) => image.status === "confirmed")
+            .map((image) => ({
+              kind: image.kind,
+              description: image.confirmedDescription!,
+            })),
+          learningNotes: await readLearningNotes(access, learnerId),
+        });
     await database.query(
-      "UPDATE learning_action SET reply = $3, status = 'complete' WHERE session_id = $1 AND id = $2 AND attempt_id = $4 AND status = 'pending'",
-      [sessionId, action.id, reply, attemptId],
+      "UPDATE learning_action SET reply = $3, research = $5, status = 'complete' WHERE session_id = $1 AND id = $2 AND attempt_id = $4 AND status = 'pending'",
+      [sessionId, action.id, reply, attemptId, research],
     );
   } catch {
     await database.query(

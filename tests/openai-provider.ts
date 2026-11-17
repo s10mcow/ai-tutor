@@ -17,6 +17,7 @@ export async function controlledOpenAI() {
     text: string,
     usage: unknown = {
       input_tokens: 10000,
+      total_tokens: 10300,
       output_tokens: 300,
       input_tokens_details: {
         cached_tokens: 0,
@@ -66,6 +67,67 @@ export async function controlledOpenAI() {
     requests,
     reply(text: string, usage?: unknown) {
       responses.push({ status: 200, body: body(text, usage) });
+    },
+    research(
+      text: string,
+      sources: Array<{ url: string; title: string }>,
+      options: {
+        noSearch?: boolean;
+        extraOutput?: unknown[];
+        invalidUsage?: boolean;
+        wait?: Promise<void>;
+        noCitations?: boolean;
+        wrongTotal?: boolean;
+      } = {},
+    ) {
+      const value = body(text);
+      responses.push({
+        status: 200,
+        wait: options.wait,
+        body: {
+          ...value,
+          ...(options.invalidUsage
+            ? { usage: null }
+            : options.wrongTotal
+              ? { usage: { ...value.usage!, total_tokens: 1 } }
+              : {}),
+          output: [
+            ...(options.noSearch
+              ? []
+              : [
+                  {
+                    type: "web_search_call",
+                    status: "completed",
+                    action: {
+                      type: "search",
+                      sources: sources.map((source) => ({
+                        type: "url",
+                        ...source,
+                      })),
+                    },
+                  },
+                ]),
+            ...value.output.map((item) => ({
+              ...item,
+              content: item.content.map((part) => ({
+                ...part,
+                annotations: options.noCitations
+                  ? []
+                  : sources.map((source, index) => ({
+                      type: "url_citation",
+                      ...source,
+                      start_index: index === 0 ? 0 : text.indexOf(".") + 1,
+                      end_index:
+                        index === 0 && sources.length > 1
+                          ? text.indexOf(".") + 1
+                          : text.length,
+                    })),
+              })),
+            })),
+            ...(options.extraOutput ?? []),
+          ],
+        },
+      });
     },
     incomplete() {
       responses.push({

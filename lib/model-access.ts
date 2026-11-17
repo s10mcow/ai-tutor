@@ -4,6 +4,9 @@ import type { ModelAccess } from "./model-access-contract.ts";
 
 // Full accepted Sol input maximum at long-context rates, plus 2,000 output tokens.
 // No count endpoint preflight, cache, tools, regional routing, or automatic retries.
+// One search permits at most pre-search and post-search inference. Reserve both
+// full Sol input/output ceilings at long-context rates, plus one search fee.
+export const researchReservationNanoUsd = 7_446_000_000n;
 export const textReservationNanoUsd = 3_718_000_000n;
 export type ProviderConfiguration = {
   mode: "live" | "fixture" | "scripted";
@@ -32,7 +35,7 @@ function evidence(value: string | undefined): Record<string, unknown> {
   }
 }
 export function providerConfiguration(
-  kind: "text" | "image" = "text",
+  kind: "text" | "image" | "research" = "text",
 ): ProviderConfiguration {
   const base: ProviderConfiguration = {
     mode:
@@ -167,6 +170,7 @@ export function providerConfiguration(
     retention.approvedZdr !== true ||
     retention.responsesTextApproved !== true ||
     (kind === "image" && retention.responsesImagesApproved !== true) ||
+    (kind === "research" && retention.responsesSearchApproved !== true) ||
     retention.applicationRetentionVerified !== true ||
     !id(retention.evidenceReference) ||
     typeof retention.expiresAt !== "string" ||
@@ -175,7 +179,7 @@ export function providerConfiguration(
     return {
       ...verified,
       reason: "unverified_retention",
-      message: `Live family retention approval is unverified for this project and ${kind === "image" ? "Responses image feature" : "text endpoint"}. store:false alone is not approval.`,
+      message: `Live family retention approval is unverified for this project and ${kind === "research" ? "Responses web search feature" : kind === "image" ? "Responses image feature" : "text endpoint"}. store:false alone is not approval.`,
     };
   }
   const retentionExpiresAt = new Date(
@@ -235,7 +239,7 @@ export async function allowanceTotals(windowId: string) {
   };
 }
 export async function modelAccess(
-  kind: "text" | "image" = "text",
+  kind: "text" | "image" | "research" = "text",
 ): Promise<ModelAccess> {
   const config = providerConfiguration(kind);
   const totals = await allowanceTotals(config.windowId);
@@ -260,7 +264,13 @@ export async function modelAccess(
     reason = window.blocked_reason;
     message =
       "The provider rejected account access or funding. Parent verification is needed before more requests.";
-  } else if (reason === "available" && remaining < textReservationNanoUsd) {
+  } else if (
+    reason === "available" &&
+    remaining <
+      (kind === "research"
+        ? researchReservationNanoUsd
+        : textReservationNanoUsd)
+  ) {
     reason = "allowance_exhausted";
     message = `The remaining app allowance cannot cover another ${kind} request. Saved work is still available.`;
   }
